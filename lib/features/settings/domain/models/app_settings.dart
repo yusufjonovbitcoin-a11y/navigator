@@ -25,7 +25,7 @@ class AppSettings {
   factory AppSettings.initial() {
     return const AppSettings(
       language: AppLanguage.uz,
-      isDarkMode: true,
+      isDarkMode: false,
       units: 'km/h',
       alertDistanceMeters: 500,
       voiceAlertsEnabled: true,

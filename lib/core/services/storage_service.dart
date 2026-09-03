@@ -25,7 +25,7 @@ class StorageService {
   Future<void> setLanguage(String code) => _prefs.setString(_keyLanguage, code);
 
   // Theme
-  bool isDarkMode() => _prefs.getBool(_keyDarkMode) ?? true;
+  bool isDarkMode() => _prefs.getBool(_keyDarkMode) ?? false;
   Future<void> setDarkMode(bool value) => _prefs.setBool(_keyDarkMode, value);
 
   // Units
