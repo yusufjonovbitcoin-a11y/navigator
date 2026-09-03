@@ -29,6 +29,8 @@ import 'package:navigator/features/navigation/presentation/screens/route_plannin
 import 'package:navigator/features/reports/domain/models/user_report.dart';
 import 'package:navigator/features/reports/presentation/providers/report_provider.dart';
 import 'package:navigator/features/reports/presentation/widgets/report_item_card.dart';
+import 'package:navigator/core/services/voice_copilot_service.dart';
+import 'package:navigator/features/ai_agent/presentation/widgets/voice_assistant_overlay.dart';
 import 'package:navigator/features/settings/presentation/providers/settings_provider.dart';
 
 class HomeMapScreen extends ConsumerStatefulWidget {
@@ -64,11 +66,19 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initUserLocation();
+      ref.read(voiceCopilotProvider.notifier).startPassiveWakeWordListener(
+        onWakeWordDetected: (query) {
+          if (mounted) {
+            VoiceAssistantOverlay.show(context);
+          }
+        },
+      );
     });
   }
 
   @override
   void dispose() {
+    ref.read(voiceCopilotProvider.notifier).stopPassiveWakeWordListener();
     _animController.dispose();
     super.dispose();
   }
@@ -954,6 +964,62 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               right: 0,
               child: ParkingDrawingHud(),
             ),
+
+          // 4.5. Glowing Voice Copilot "Hey Radar" Floating Button
+          Positioned(
+            right: 16,
+            bottom: 375,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.heavyImpact();
+                VoiceAssistantOverlay.show(context);
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF00E5FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6366F1).withOpacity(0.45),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(CupertinoIcons.mic_fill, color: Colors.white, size: 17),
+                        SizedBox(width: 6),
+                        Text(
+                          '«Hey Radar»',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
           // 5. iOS Vertical Frosted Action Capsule (Right Side)
           Positioned(

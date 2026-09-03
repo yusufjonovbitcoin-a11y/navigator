@@ -105,7 +105,76 @@ class VoiceCopilotNotifier extends StateNotifier<VoiceCopilotState> {
     } catch (_) {}
   }
 
+  bool _isPassiveListening = false;
+  Function(String)? _onWakeWordCallback;
+
+  Future<void> startPassiveWakeWordListener({required Function(String query) onWakeWordDetected}) async {
+    _onWakeWordCallback = onWakeWordDetected;
+    if (_isPassiveListening || state.isListening) return;
+
+    if (!_speechInitialized) {
+      await _initSpeech();
+    }
+    if (!_speechInitialized) return;
+
+    _isPassiveListening = true;
+    _listenForWakeWord();
+  }
+
+  void _listenForWakeWord() async {
+    if (!_isPassiveListening || state.isListening) return;
+
+    try {
+      final settings = _ref.read(settingsNotifierProvider);
+      String localeId = 'uz_UZ';
+      if (settings.language.code == 'ru') localeId = 'ru_RU';
+      if (settings.language.code == 'en') localeId = 'en_US';
+
+      await _speech.listen(
+        localeId: localeId,
+        listenMode: stt.ListenMode.dictation,
+        partialResults: true,
+        pauseFor: const Duration(seconds: 4),
+        onResult: (val) {
+          final words = val.recognizedWords.toLowerCase();
+          for (final kw in [
+            'hey radar',
+            'xey radar',
+            'ey radar',
+            'эй радар',
+            'хей радар',
+            'радар',
+            'radar',
+            'hey navigator',
+            'navigator',
+          ]) {
+            if (words.contains(kw)) {
+              _isPassiveListening = false;
+              _speech.stop();
+              HapticFeedback.heavyImpact();
+              if (_onWakeWordCallback != null) {
+                _onWakeWordCallback!(words);
+              }
+              return;
+            }
+          }
+        },
+      );
+    } catch (_) {
+      _isPassiveListening = false;
+    }
+  }
+
+  void stopPassiveWakeWordListener() {
+    _isPassiveListening = false;
+    _onWakeWordCallback = null;
+    if (_speech.isListening && !state.isListening) {
+      _speech.stop();
+    }
+  }
+
   Future<void> startListening() async {
+    _isPassiveListening = false;
     if (state.isListening) {
       await stopListening();
       return;
