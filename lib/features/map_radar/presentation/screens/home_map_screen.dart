@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:navigator/core/constants/app_colors.dart';
 import 'package:navigator/core/localization/app_localizations.dart';
 import 'package:navigator/core/services/location_service.dart';
@@ -27,6 +27,8 @@ import 'package:navigator/features/map_radar/presentation/widgets/radar_detail_s
 import 'package:navigator/features/map_radar/presentation/widgets/speedometer_hud.dart';
 import 'package:navigator/features/navigation/presentation/screens/route_planning_screen.dart';
 import 'package:navigator/features/reports/domain/models/user_report.dart';
+import 'package:navigator/features/reports/presentation/providers/pothole_placement_provider.dart';
+import 'package:navigator/features/reports/presentation/providers/report_adjustment_provider.dart';
 import 'package:navigator/features/reports/presentation/providers/report_provider.dart';
 import 'package:navigator/features/reports/presentation/widgets/report_item_card.dart';
 import 'package:navigator/core/services/voice_copilot_service.dart';
@@ -55,6 +57,10 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
   LatLng _currentRenderedPos = const LatLng(39.654760, 66.975830);
   double _currentRenderedHeading = 0.0;
   bool _isLocInitialized = false;
+
+  // Multiradarni ustiga bosib ekrandan qo'lni uzmasdan siljitish holati
+  Offset? _multiradarDragScreenPos;
+  bool _isDraggingMultiradar = false;
 
   @override
   void initState() {
@@ -165,6 +171,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
 
   void _openQuickReport() {
     HapticFeedback.mediumImpact();
+    ref.read(mapFilterProvider.notifier).clear();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -195,6 +202,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
             final activeStyle = ref.watch(mapStyleProvider);
             final activeFilter = ref.watch(mapFilterProvider);
 
+            final bottomInset = MediaQuery.of(context).padding.bottom;
+
             return Container(
               decoration: BoxDecoration(
                 color: bg,
@@ -207,7 +216,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset > 0 ? bottomInset + 12 : 28),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,72 +311,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 22),
-                  Divider(
-                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-                    height: 1,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Section 2: Подробности / Qo'shimcha ma'lumotlar
-                  Text(
-                    tr.tr('map_details').toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                      color: subtextColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // 3 Feature Toggles: Tirbandlik, Radarlar, Parkovkalar
-                  Row(
-                    children: [
-                      // Tirbandlik (Traffic)
-                      _buildDetailPill(
-                        icon: CupertinoIcons.car_detailed,
-                        label: tr.tr('traffic'),
-                        color: const Color(0xFFEA4335),
-                        isActive: true,
-                        isDark: isDark,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                        },
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Radarlar & Kameralar
-                      _buildDetailPill(
-                        icon: CupertinoIcons.dot_radiowaves_left_right,
-                        label: tr.tr('radar'),
-                        color: const Color(0xFFFF9500),
-                        isActive: activeFilter == MapFilterType.all || activeFilter == MapFilterType.radar,
-                        isDark: isDark,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          ref.read(mapFilterProvider.notifier).toggleFilter(MapFilterType.radar);
-                          setModalState(() {});
-                        },
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Parkovkalar
-                      _buildDetailPill(
-                        icon: CupertinoIcons.placemark_fill,
-                        label: 'Parkovka',
-                        color: const Color(0xFF34C759),
-                        isActive: activeFilter == MapFilterType.all || activeFilter == MapFilterType.parkovka,
-                        isDark: isDark,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          ref.read(mapFilterProvider.notifier).toggleFilter(MapFilterType.parkovka);
-                          setModalState(() {});
-                        },
-                      ),
-                    ],
-                  ),
                 ],
               ),
             );
@@ -382,169 +325,27 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
       case MapStyle.osmStandard:
         return ClipRRect(
           borderRadius: BorderRadius.circular(13),
-          child: Container(
-            color: const Color(0xFFE8F4EC),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: -6,
-                  top: -6,
-                  width: 44,
-                  height: 44,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFC8E6C9).withOpacity(0.7),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 32,
-                  height: 8,
-                  child: Container(color: Colors.white),
-                ),
-                Positioned(
-                  top: 0,
-                  bottom: 0,
-                  left: 36,
-                  width: 8,
-                  child: Container(color: Colors.white),
-                ),
-                Positioned(
-                  left: 8,
-                  right: 18,
-                  top: 34,
-                  height: 4,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A73E8),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const Center(
-                  child: Icon(
-                    CupertinoIcons.location_north_fill,
-                    size: 16,
-                    color: Color(0xFFEA4335),
-                  ),
-                ),
-              ],
-            ),
+          child: CustomPaint(
+            painter: GoogleMapsStandardPainter(),
+            size: Size.infinite,
           ),
         );
 
       case MapStyle.satellite:
         return ClipRRect(
           borderRadius: BorderRadius.circular(13),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E392A), Color(0xFF0F2417)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -10,
-                  bottom: -10,
-                  width: 55,
-                  height: 55,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF13364B).withOpacity(0.95),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 6,
-                  top: 12,
-                  width: 50,
-                  height: 2,
-                  child: Transform.rotate(
-                    angle: 0.45,
-                    child: Container(color: Colors.white30),
-                  ),
-                ),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.35),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.globe,
-                      size: 20,
-                      color: Color(0xFF7DD3FC),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          child: CustomPaint(
+            painter: GoogleMapsSatellitePainter(),
+            size: Size.infinite,
           ),
         );
 
       case MapStyle.darkNavigation:
         return ClipRRect(
           borderRadius: BorderRadius.circular(13),
-          child: Container(
-            color: const Color(0xFF0F172A),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 32,
-                  height: 7,
-                  child: Container(color: const Color(0xFF1E293B)),
-                ),
-                Positioned(
-                  top: 0,
-                  bottom: 0,
-                  left: 36,
-                  width: 7,
-                  child: Container(color: const Color(0xFF1E293B)),
-                ),
-                Positioned(
-                  left: 10,
-                  right: 18,
-                  top: 33.5,
-                  height: 4,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00E5FF),
-                      borderRadius: BorderRadius.circular(2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF00E5FF).withOpacity(0.6),
-                          blurRadius: 5,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withOpacity(0.35),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      CupertinoIcons.moon_stars_fill,
-                      size: 16,
-                      color: Color(0xFF818CF8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          child: CustomPaint(
+            painter: GoogleMapsDarkPainter(),
+            size: Size.infinite,
           ),
         );
     }
@@ -566,7 +367,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              height: 74,
+              height: 72,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
@@ -576,9 +377,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: activeBorderColor.withOpacity(0.32),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                          color: activeBorderColor.withOpacity(0.28),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ]
                     : null,
@@ -593,15 +394,18 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                       right: 6,
                       top: 6,
                       child: Container(
-                        padding: const EdgeInsets.all(2.5),
+                        width: 20,
+                        height: 20,
                         decoration: const BoxDecoration(
                           color: activeBorderColor,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          CupertinoIcons.checkmark,
-                          color: Colors.white,
-                          size: 11,
+                        child: const Center(
+                          child: Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -615,60 +419,15 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
                     ? activeBorderColor
-                    : (isDark ? Colors.white : const Color(0xFF3C4043)),
+                    : (isDark ? Colors.white70 : const Color(0xFF3C4043)),
+                letterSpacing: -0.2,
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailPill({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required bool isActive,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isActive
-                ? color.withOpacity(isDark ? 0.22 : 0.12)
-                : (isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9)),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isActive ? color.withOpacity(0.5) : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -760,6 +519,8 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
     final isSimulating = ref.watch(isSimulatingDriveProvider);
     final parkingState = ref.watch(parkingZoneProvider);
     final placementState = ref.watch(mapPlacementProvider);
+    final potholePlacement = ref.watch(potholePlacementProvider);
+    final adjustmentState = ref.watch(reportAdjustmentProvider);
     final mapFilter = ref.watch(mapFilterProvider);
 
     final allRadars = radarsAsync.value ?? [];
@@ -781,6 +542,11 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
     }).toList();
 
     final filteredReports = allReports.where((r) {
+      if (r.type == ReportType.accident ||
+          r.type == ReportType.trafficJam ||
+          r.type == ReportType.roadwork) {
+        return false;
+      }
       if (mapFilter == MapFilterType.all) return true;
       if (mapFilter == MapFilterType.gai) {
         return r.type == ReportType.policePatrol;
@@ -796,7 +562,16 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
       }
     });
 
+    ref.listen<LatLng?>(mapTargetFocusProvider, (prev, next) {
+      if (next != null) {
+        setState(() => _followUser = false);
+        _mapController.move(next, 16.8);
+        ref.read(mapTargetFocusProvider.notifier).state = null;
+      }
+    });
+
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE8ECE9),
       body: SizedBox.expand(
         child: Stack(
           fit: StackFit.expand,
@@ -809,7 +584,19 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                 initialZoom: isSimulating ? 17.2 : 14.8,
                 minZoom: 3.0,
                 maxZoom: 19.5,
+                interactionOptions: InteractionOptions(
+                  flags: _isDraggingMultiradar
+                      ? InteractiveFlag.none
+                      : InteractiveFlag.all,
+                ),
               onTap: (tapPosition, point) {
+                // Opasnaya yama: tayoqchani bosilgan joyga to'g'rilash
+                if (potholePlacement.isPlacing) {
+                  HapticFeedback.selectionClick();
+                  _mapController.move(point, _mapController.camera.zoom);
+                  return;
+                }
+
                 // Handle Map Placement Pin Drop (Radar, GAI, Kamera)
                 if (placementState.isPlacing && placementState.activeType != null) {
                   HapticFeedback.mediumImpact();
@@ -835,10 +622,15 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
             children: [
               TileLayer(
                 urlTemplate: mapStyle.urlTemplate,
+                fallbackUrl: mapStyle.fallbackUrl,
                 subdomains: mapStyle.subdomains,
                 userAgentPackageName: 'com.smartradar.navigator',
                 maxNativeZoom: mapStyle.maxNativeZoom,
                 maxZoom: 20,
+                panBuffer: 1,
+                keepBuffer: 3,
+                evictErrorTileStrategy: EvictErrorTileStrategy.dispose,
+                tileDisplay: const TileDisplay.fadeIn(duration: Duration(milliseconds: 150)),
               ),
 
               // Simulated Route Polyline (Shown during drive simulation)
@@ -990,7 +782,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 1. Radar Head Badge
+                            // 1. Radar / Camera Head Badge
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                               decoration: BoxDecoration(
@@ -1013,9 +805,9 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    radar.type == RadarType.mobile
-                                        ? CupertinoIcons.dot_radiowaves_left_right
-                                        : CupertinoIcons.camera_fill,
+                                    isStationary
+                                        ? CupertinoIcons.camera_fill
+                                        : CupertinoIcons.dot_radiowaves_left_right,
                                     color: markerColor,
                                     size: 13,
                                   ),
@@ -1072,7 +864,11 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   }),
 
                   // Community GAI & Live Hazard Pins (Mounted on Pole / Glowing Badges)
-                  ...filteredReports.map((report) {
+                  ...filteredReports
+                      .where((r) => !(adjustmentState.isActive &&
+                          adjustmentState.reportId == r.id &&
+                          adjustmentState.remainingMoves > 0))
+                      .map((report) {
                     final typeColor = report.type.color;
                     final isLevel5 = report.authorTrustLevel >= 5;
                     final isGai = report.type == ReportType.policePatrol;
@@ -1179,15 +975,19 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                                   ),
                                   if (isLevel5)
                                     Positioned(
-                                      right: 2,
-                                      top: 2,
+                                      top: 0,
+                                      right: 0,
                                       child: Container(
                                         padding: const EdgeInsets.all(2),
                                         decoration: const BoxDecoration(
                                           color: Color(0xFF34C759),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(CupertinoIcons.checkmark, color: Colors.black, size: 8),
+                                        child: const Icon(
+                                          CupertinoIcons.checkmark_alt,
+                                          color: Colors.white,
+                                          size: 8,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -1200,8 +1000,16 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
             ],
           ),
 
+          // Draggable Multiradar Overlay (Ustiga bosib turib ekrandan qo'lni uzmasdan siljitish)
+          if (adjustmentState.isActive && adjustmentState.remainingMoves > 0)
+            _buildDraggableMultiradarOverlay(adjustmentState),
+
+          // Opasnaya yama: xaritada markaziy tayoqcha
+          if (potholePlacement.isPlacing)
+            _buildPotholeCenterPin(),
+
           // 2. Apple iOS Frosted Header HUD (Dynamic Search & Category Filter Pills)
-          if (!parkingState.isDrawingMode && !placementState.isPlacing)
+          if (!parkingState.isDrawingMode && !placementState.isPlacing && !potholePlacement.isPlacing)
             Positioned(
               top: 0,
               left: 0,
@@ -1340,7 +1148,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
             ),
 
           // 2.5. Google Maps Style Standalone Floating Layers Button (Top Right)
-          if (!parkingState.isDrawingMode && !placementState.isPlacing)
+          if (!parkingState.isDrawingMode && !placementState.isPlacing && !potholePlacement.isPlacing)
             Positioned(
               top: MediaQuery.of(context).padding.top + 106,
               right: 16,
@@ -1382,6 +1190,15 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               child: MapPlacementHud(),
             ),
 
+          // 3.5. Opasnaya yama Placement HUD (Tepada saqlash tugmasi)
+          if (potholePlacement.isPlacing)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _buildPotholePlacementTopHud(),
+            ),
+
           // 4. Parking Drawing HUD (Active when drawing mode is ON)
           if (parkingState.isDrawingMode)
             const Positioned(
@@ -1412,17 +1229,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Simulation Drive Toggle
-                      IconButton(
-                        icon: Icon(
-                          isSimulating ? CupertinoIcons.stop_circle_fill : CupertinoIcons.play_circle_fill,
-                          color: isSimulating ? AppColors.radarRed : AppColors.primary,
-                          size: 24,
-                        ),
-                        onPressed: _toggleSimulation,
-                        tooltip: isSimulating ? tr.tr('stop_sim') : tr.tr('simulate_drive'),
-                      ),
-                      Divider(color: Colors.white.withOpacity(0.1), height: 12),
 
                       // Re-center Location Button
                       IconButton(
@@ -1449,16 +1255,18 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
             ),
           ),
 
-          // 6. Apple CarPlay Style Speedometer HUD (Bottom Left)
-          Positioned(
-            left: 16,
-            bottom: 100,
-            child: SpeedometerHud(
-              currentSpeedKmh: alertState.currentSpeedKmh,
-              speedLimitKmh: alertState.closestRadar?.speedLimit ?? 70,
-              isWarningActive: alertState.isWarningActive,
+          // 6. Apple CarPlay Style Speedometer HUD (Top Left)
+          // Faqat avtomobil 10 km/soat va undan yuqori tezlikda harakatlanganda ko'rinadi
+          if (alertState.currentSpeedKmh >= 10)
+            Positioned(
+              left: 16,
+              top: MediaQuery.of(context).padding.top + 106,
+              child: SpeedometerHud(
+                currentSpeedKmh: alertState.currentSpeedKmh,
+                speedLimitKmh: alertState.closestRadar?.speedLimit ?? 70,
+                isWarningActive: alertState.isWarningActive,
+              ),
             ),
-          ),
         ],
       ),
     ),
@@ -1520,4 +1328,668 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
       ),
     );
   }
+
+  Widget _buildDraggableMultiradarOverlay(ReportAdjustmentState adjustmentState) {
+    math.Point<double> screenPoint;
+    try {
+      screenPoint = _mapController.camera.latLngToScreenPoint(adjustmentState.currentPos);
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
+
+    final isDragging = _isDraggingMultiradar;
+    final currentOffset = _multiradarDragScreenPos ?? Offset(screenPoint.x, screenPoint.y);
+
+    final isGai = adjustmentState.type == ReportType.policePatrol;
+    final primaryColor = isGai ? const Color(0xFF007AFF) : const Color(0xFFFF3366);
+    final gradientColors = isGai
+        ? [const Color(0xFF0A2540), const Color(0xFF0066EE)]
+        : [const Color(0xFF2A0845), const Color(0xFF6441A5)];
+    final label = isGai ? 'Патруль ДПС' : 'Мультирадар';
+    final icon = isGai ? CupertinoIcons.shield_fill : CupertinoIcons.camera_fill;
+
+    // Hit target dimensions (large touch hitbox so user can easily grab it)
+    const double targetWidth = 140.0;
+    const double targetHeight = 120.0;
+    final double liftY = isDragging ? 50.0 : 0.0;
+
+    return Positioned(
+      left: currentOffset.dx - (targetWidth / 2),
+      top: currentOffset.dy - targetHeight + 20 - liftY,
+      width: targetWidth,
+      height: targetHeight + liftY,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanStart: (details) {
+          HapticFeedback.selectionClick();
+          setState(() {
+            _isDraggingMultiradar = true;
+            _multiradarDragScreenPos = details.globalPosition;
+          });
+          ref.read(reportAdjustmentProvider.notifier).setIsDragging(true);
+        },
+        onPanUpdate: (details) {
+          setState(() {
+            _multiradarDragScreenPos = details.globalPosition;
+          });
+        },
+        onPanEnd: (details) async {
+          final dropPos = _multiradarDragScreenPos;
+          setState(() {
+            _isDraggingMultiradar = false;
+            _multiradarDragScreenPos = null;
+          });
+          ref.read(reportAdjustmentProvider.notifier).setIsDragging(false);
+
+          if (dropPos != null) {
+            try {
+              final newLatLng = _mapController.camera.pointToLatLng(
+                math.Point(dropPos.dx, dropPos.dy),
+              );
+
+              HapticFeedback.mediumImpact();
+              ref.read(reportAdjustmentProvider.notifier).updateCurrentPos(newLatLng);
+              ref.read(reportListProvider.notifier).updateReportLocationOptimistic(
+                    id: adjustmentState.reportId,
+                    lat: newLatLng.latitude,
+                    lng: newLatLng.longitude,
+                  );
+
+              await ref.read(reportListProvider.notifier).updateReportLocation(
+                    id: adjustmentState.reportId,
+                    lat: newLatLng.latitude,
+                    lng: newLatLng.longitude,
+                  );
+
+              final isDone = ref.read(reportAdjustmentProvider.notifier).commitMove();
+              if (isDone) {
+                Future.delayed(const Duration(milliseconds: 1500), () {
+                  if (mounted) {
+                    ref.read(reportAdjustmentProvider.notifier).finish();
+                  }
+                });
+              }
+            } catch (e) {
+              debugPrint('Error projecting drag drop point: $e');
+            }
+          }
+        },
+        onPanCancel: () {
+          setState(() {
+            _isDraggingMultiradar = false;
+            _multiradarDragScreenPos = null;
+          });
+          ref.read(reportAdjustmentProvider.notifier).setIsDragging(false);
+        },
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.none,
+          children: [
+            // While dragging: crosshair dot on the exact road point under finger
+            if (isDragging)
+              Positioned(
+                bottom: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.6),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 2,
+                      height: liftY - 4,
+                      color: primaryColor.withOpacity(0.7),
+                    ),
+                  ],
+                ),
+              ),
+
+            // The Radar Marker Badge
+            Positioned(
+              bottom: isDragging ? liftY + 12 : 12,
+              child: AnimatedScale(
+                scale: isDragging ? 1.15 : 1.0,
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOutBack,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Main Badge Pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: gradientColors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: primaryColor,
+                          width: 2.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDragging
+                                ? primaryColor.withOpacity(0.7)
+                                : Colors.black.withOpacity(0.4),
+                            blurRadius: isDragging ? 16 : 8,
+                            offset: Offset(0, isDragging ? 6 : 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.5),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Icon(
+                                icon,
+                                color: Colors.white,
+                                size: 11,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Needle pointing to road
+                    if (!isDragging) ...[
+                      Container(
+                        width: 2.2,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPotholeCenterPin() {
+    return IgnorePointer(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4C1D95), Color(0xFF7C3AED)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFC084FC), width: 1.8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withOpacity(0.55),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.exclamationmark_triangle_fill,
+                      color: Color(0xFFFBBF24),
+                      size: 15,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Опасная яма',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12.5,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Tayoqcha (vertical pole)
+              Container(
+                width: 2.4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFC084FC),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+
+              // Point at the road
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withOpacity(0.8),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPotholePlacementTopHud() {
+    final isDark = ref.watch(settingsNotifierProvider).isDarkMode;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A).withOpacity(0.94) : Colors.white.withOpacity(0.96),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.5), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Cancel button
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      ref.read(potholePlacementProvider.notifier).cancelPlacing();
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white12 : const Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        CupertinoIcons.xmark,
+                        size: 16,
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Title and instruction
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Опасная яма',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Text(
+                          'Tayoqchani belgilangan joyga olib boring',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // "Saqlash" button (Tepada saqlash tugmasi!)
+                  GestureDetector(
+                    onTap: () async {
+                      HapticFeedback.mediumImpact();
+                      final centerPoint = _mapController.camera.center;
+                      ref.read(potholePlacementProvider.notifier).cancelPlacing();
+
+                      await ref.read(reportListProvider.notifier).createReport(
+                            type: ReportType.pothole,
+                            lat: centerPoint.latitude,
+                            lng: centerPoint.longitude,
+                            address: 'Chuqurlik (${centerPoint.latitude.toStringAsFixed(4)}, ${centerPoint.longitude.toStringAsFixed(4)})',
+                          );
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            backgroundColor: const Color(0xFF0F172A),
+                            elevation: 6,
+                            content: const Row(
+                              children: [
+                                Icon(CupertinoIcons.checkmark_alt_circle_fill, color: Color(0xFF10B981), size: 22),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Опасная яма joylandi va saqlandi',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(CupertinoIcons.checkmark_alt, color: Colors.white, size: 16),
+                          SizedBox(width: 5),
+                          Text(
+                            'Saqlash',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class GoogleMapsStandardPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Base land: Google Maps cream
+    final landPaint = Paint()..color = const Color(0xFFF1EFE8);
+    canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(13)), landPaint);
+
+    // 2. Water (curved river/bay on top-right & right)
+    final waterPaint = Paint()..color = const Color(0xFFA5C9EB)..style = PaintingStyle.fill;
+    final waterPath = Path()
+      ..moveTo(size.width * 0.65, 0)
+      ..quadraticBezierTo(size.width * 0.7, size.height * 0.4, size.width, size.height * 0.55)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(waterPath, waterPaint);
+
+    // 3. Green park area (bottom-left)
+    final parkPaint = Paint()..color = const Color(0xFFC6E7D2)..style = PaintingStyle.fill;
+    final parkPath = Path()
+      ..moveTo(0, size.height * 0.2)
+      ..quadraticBezierTo(size.width * 0.35, size.height * 0.15, size.width * 0.38, size.height * 0.6)
+      ..quadraticBezierTo(size.width * 0.2, size.height * 0.75, 0, size.height * 0.65)
+      ..close();
+    canvas.drawPath(parkPath, parkPaint);
+
+    // 4. City street grid (white roads)
+    final streetPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, size.height * 0.3), Offset(size.width * 0.75, size.height * 0.3), streetPaint);
+    canvas.drawLine(Offset(0, size.height * 0.7), Offset(size.width, size.height * 0.7), streetPaint);
+    canvas.drawLine(Offset(size.width * 0.25, 0), Offset(size.width * 0.25, size.height), streetPaint);
+    canvas.drawLine(Offset(size.width * 0.6, 0), Offset(size.width * 0.6, size.height), streetPaint);
+
+    // 5. Google Maps Main Highway (Yellow with orange edge)
+    final highwayCasing = Paint()
+      ..color = const Color(0xFFF1C453)
+      ..strokeWidth = 6.0
+      ..style = PaintingStyle.stroke;
+    final highwayPaint = Paint()
+      ..color = const Color(0xFFFBD471)
+      ..strokeWidth = 4.5
+      ..style = PaintingStyle.stroke;
+
+    final highwayPath = Path()
+      ..moveTo(0, size.height * 0.5)
+      ..cubicTo(size.width * 0.35, size.height * 0.5, size.width * 0.55, size.height * 0.45, size.width, size.height * 0.35);
+
+    canvas.drawPath(highwayPath, highwayCasing);
+    canvas.drawPath(highwayPath, highwayPaint);
+
+    // 6. Navigation Red Pin or Location Point
+    final pinPaint = Paint()..color = const Color(0xFFEA4335);
+    canvas.drawCircle(Offset(size.width * 0.48, size.height * 0.46), 4.5, pinPaint);
+    final pinInner = Paint()..color = Colors.white;
+    canvas.drawCircle(Offset(size.width * 0.48, size.height * 0.46), 2.0, pinInner);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class GoogleMapsSatellitePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Base terrain gradient (lush forest green & agricultural shades)
+    final rect = Offset.zero & size;
+    final bgPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF1B3D22), Color(0xFF284E2D), Color(0xFF1E3520)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(rect);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(13)), bgPaint);
+
+    // 2. Agricultural field patchwork
+    final field1 = Paint()..color = const Color(0xFF335836).withOpacity(0.6);
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.08, size.height * 0.12, size.width * 0.28, size.height * 0.32), field1);
+
+    final field2 = Paint()..color = const Color(0xFF4A4B2E).withOpacity(0.5);
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.05, size.height * 0.55, size.width * 0.32, size.height * 0.35), field2);
+
+    // 3. Deep ocean / coastline (right side)
+    final oceanPaint = Paint()..color = const Color(0xFF0C2438)..style = PaintingStyle.fill;
+    final coastPath = Path()
+      ..moveTo(size.width * 0.62, 0)
+      ..quadraticBezierTo(size.width * 0.68, size.height * 0.45, size.width, size.height * 0.62)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(coastPath, oceanPaint);
+
+    // Sand shoreline
+    final sandPaint = Paint()
+      ..color = const Color(0xFF8A8265).withOpacity(0.6)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+    final sandPath = Path()
+      ..moveTo(size.width * 0.62, 0)
+      ..quadraticBezierTo(size.width * 0.68, size.height * 0.45, size.width, size.height * 0.62);
+    canvas.drawPath(sandPath, sandPaint);
+
+    // 4. White aerial roads and bridge crossing ocean
+    final roadPaint = Paint()
+      ..color = Colors.white.withOpacity(0.85)
+      ..strokeWidth = 2.4
+      ..style = PaintingStyle.stroke;
+
+    final bridgePath = Path()
+      ..moveTo(0, size.height * 0.48)
+      ..cubicTo(size.width * 0.4, size.height * 0.48, size.width * 0.65, size.height * 0.4, size.width, size.height * 0.32);
+    canvas.drawPath(bridgePath, roadPaint);
+
+    // Secondary aerial grid
+    final gridRoad = Paint()
+      ..color = Colors.white.withOpacity(0.4)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(size.width * 0.35, 0), Offset(size.width * 0.35, size.height), gridRoad);
+    canvas.drawLine(Offset(0, size.height * 0.75), Offset(size.width * 0.75, size.height * 0.75), gridRoad);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class GoogleMapsDarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Dark charcoal/slate navigation background
+    final landPaint = Paint()..color = const Color(0xFF181E29);
+    canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(13)), landPaint);
+
+    // 2. Dark navy water bay
+    final waterPaint = Paint()..color = const Color(0xFF0F172A)..style = PaintingStyle.fill;
+    final waterPath = Path()
+      ..moveTo(size.width * 0.65, 0)
+      ..quadraticBezierTo(size.width * 0.7, size.height * 0.4, size.width, size.height * 0.55)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(waterPath, waterPaint);
+
+    // 3. Dark forest park
+    final parkPaint = Paint()..color = const Color(0xFF1E2A38)..style = PaintingStyle.fill;
+    final parkPath = Path()
+      ..moveTo(0, size.height * 0.2)
+      ..quadraticBezierTo(size.width * 0.35, size.height * 0.15, size.width * 0.38, size.height * 0.6)
+      ..quadraticBezierTo(size.width * 0.2, size.height * 0.75, 0, size.height * 0.65)
+      ..close();
+    canvas.drawPath(parkPath, parkPaint);
+
+    // 4. Subtle dark streets grid
+    final streetPaint = Paint()
+      ..color = const Color(0xFF283447)
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, size.height * 0.3), Offset(size.width * 0.75, size.height * 0.3), streetPaint);
+    canvas.drawLine(Offset(0, size.height * 0.7), Offset(size.width, size.height * 0.7), streetPaint);
+    canvas.drawLine(Offset(size.width * 0.25, 0), Offset(size.width * 0.25, size.height), streetPaint);
+    canvas.drawLine(Offset(size.width * 0.6, 0), Offset(size.width * 0.6, size.height), streetPaint);
+
+    // 5. Glowing Neon Cyan Navigation Route
+    final glowPaint = Paint()
+      ..color = const Color(0xFF00E5FF).withOpacity(0.4)
+      ..strokeWidth = 6.5
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    final routePaint = Paint()
+      ..color = const Color(0xFF00E5FF)
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke;
+
+    final routePath = Path()
+      ..moveTo(0, size.height * 0.5)
+      ..cubicTo(size.width * 0.35, size.height * 0.5, size.width * 0.55, size.height * 0.45, size.width, size.height * 0.35);
+
+    canvas.drawPath(routePath, glowPaint);
+    canvas.drawPath(routePath, routePaint);
+
+    // 6. Cyan GPS Navigation Arrow
+    final arrowPaint = Paint()..color = Colors.white;
+    final arrowPath = Path()
+      ..moveTo(size.width * 0.48, size.height * 0.4)
+      ..lineTo(size.width * 0.53, size.height * 0.52)
+      ..lineTo(size.width * 0.48, size.height * 0.48)
+      ..lineTo(size.width * 0.43, size.height * 0.52)
+      ..close();
+    canvas.drawPath(arrowPath, arrowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

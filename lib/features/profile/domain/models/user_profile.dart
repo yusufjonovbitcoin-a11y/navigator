@@ -91,18 +91,18 @@ class UserProfile {
   factory UserProfile.defaultUser() {
     return UserProfile(
       userId: 'usr_me',
-      name: 'Nurmukhammad R.',
+      name: 'Haydovchi',
       email: 'driver@smartradar.io',
-      avatarInitials: 'NR',
-      safetyScore: 96,
-      tierTitle: 'Level 5 Elite Road Marshal',
-      totalDistanceKm: 1540.5,
+      avatarInitials: 'H',
+      safetyScore: 100,
+      tierTitle: 'Level 1 Yangi Haydovchi',
+      totalDistanceKm: 0.0,
       speedingEventsCount: 0,
-      cleanTripsCount: 52,
-      karmaPoints: 1680, // Level 5 Trusted Driver
+      cleanTripsCount: 0,
+      karmaPoints: 0,
       rankPosition: 1,
-      badges: [],
-      joinedDate: DateTime.now().subtract(const Duration(days: 90)),
+      badges: const [],
+      joinedDate: DateTime.now(),
     );
   }
 }

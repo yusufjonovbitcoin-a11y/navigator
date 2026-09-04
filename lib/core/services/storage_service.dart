@@ -48,7 +48,7 @@ class StorageService {
   Future<void> setOnboardingCompleted(bool val) => _prefs.setBool(_keyOnboardingCompleted, val);
 
   // Dev / API Configuration
-  bool getUseMockData() => _prefs.getBool(_keyUseMockData) ?? true;
+  bool getUseMockData() => _prefs.getBool(_keyUseMockData) ?? false;
   Future<void> setUseMockData(bool val) => _prefs.setBool(_keyUseMockData, val);
 
   String getApiBaseUrl() => _prefs.getString(_keyApiBaseUrl) ?? 'https://api.smartradar.io/v1';

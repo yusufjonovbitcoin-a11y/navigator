@@ -1,10 +1,9 @@
 import 'package:navigator/core/services/supabase_service.dart';
-import 'package:navigator/features/reports/data/mock_report_repository.dart';
 import 'package:navigator/features/reports/domain/models/user_report.dart';
 import 'package:navigator/features/reports/domain/repositories/report_repository.dart';
 
 class SupabaseReportRepository implements ReportRepository {
-  final MockReportRepository _fallback = MockReportRepository();
+  List<UserReport> _cachedReports = [];
 
   @override
   Future<List<UserReport>> getRecentReports() async {
@@ -16,15 +15,13 @@ class SupabaseReportRepository implements ReportRepository {
           .limit(50);
 
       final List<dynamic> data = response as List<dynamic>;
-      if (data.isEmpty) {
-        return await _fallback.getRecentReports();
-      }
-
-      return data
+      final reports = data
           .map((json) => UserReport.fromJson(json as Map<String, dynamic>))
           .toList();
+      _cachedReports = reports;
+      return reports;
     } catch (_) {
-      return await _fallback.getRecentReports();
+      return _cachedReports;
     }
   }
 
@@ -42,25 +39,27 @@ class SupabaseReportRepository implements ReportRepository {
           .map((json) => UserReport.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (_) {
-      return await _fallback.getMyReports(userId);
+      return _cachedReports.where((r) => r.userId == userId).toList();
     }
   }
 
   @override
   Future<UserReport> submitReport(UserReport report) async {
-    try {
-      final id = report.id.isEmpty
-          ? 'rep_${DateTime.now().millisecondsSinceEpoch}'
-          : report.id;
-      final readyReport = report.copyWith(id: id);
+    final id = report.id.isEmpty
+        ? 'rep_${DateTime.now().millisecondsSinceEpoch}'
+        : report.id;
+    final readyReport = report.copyWith(id: id);
 
+    try {
       await SupabaseService.client
           .from('user_reports')
-          .insert(readyReport.toSupabase());
-
+          .upsert(readyReport.toSupabase());
+      _cachedReports.removeWhere((r) => r.id == readyReport.id);
+      _cachedReports.insert(0, readyReport);
       return readyReport;
     } catch (_) {
-      return await _fallback.submitReport(report);
+      _cachedReports.insert(0, readyReport);
+      return readyReport;
     }
   }
 
@@ -80,7 +79,7 @@ class SupabaseReportRepository implements ReportRepository {
           .eq('id', reportId);
       return true;
     } catch (_) {
-      return await _fallback.upvoteReport(reportId);
+      return false;
     }
   }
 
@@ -100,12 +99,12 @@ class SupabaseReportRepository implements ReportRepository {
           .eq('id', reportId);
       return true;
     } catch (_) {
-      return await _fallback.downvoteReport(reportId);
+      return false;
     }
   }
 
   @override
   Future<void> pruneExpiredReports() async {
-    // Handled by database or backend
+    // Handled directly by Supabase
   }
 }

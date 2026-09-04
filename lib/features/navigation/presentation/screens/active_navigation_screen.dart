@@ -172,10 +172,15 @@ class _ActiveNavigationScreenState extends ConsumerState<ActiveNavigationScreen>
                 children: [
                   TileLayer(
                     urlTemplate: mapStyle.urlTemplate,
+                    fallbackUrl: mapStyle.fallbackUrl,
                     subdomains: mapStyle.subdomains,
                     userAgentPackageName: 'com.smartradar.navigator',
                     maxNativeZoom: mapStyle.maxNativeZoom,
                     maxZoom: 20,
+                    panBuffer: 1,
+                    keepBuffer: 3,
+                    evictErrorTileStrategy: EvictErrorTileStrategy.dispose,
+                    tileDisplay: const TileDisplay.fadeIn(duration: Duration(milliseconds: 150)),
                   ),
 
                   // Active Route Polyline with High Contrast Glow

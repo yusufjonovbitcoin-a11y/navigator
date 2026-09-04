@@ -4,7 +4,7 @@ import 'package:navigator/features/reports/domain/models/user_report.dart';
 import 'package:navigator/features/reports/domain/repositories/report_repository.dart';
 
 // User Karma State
-final userKarmaProvider = StateProvider<int>((ref) => 1680); // Level 5 Road Marshal
+final userKarmaProvider = StateProvider<int>((ref) => 0);
 
 // Report repository provider powered by Supabase (with offline fallback)
 final reportRepositoryProvider = Provider<ReportRepository>((ref) {
@@ -30,7 +30,7 @@ class ReportListNotifier extends StateNotifier<AsyncValue<List<UserReport>>> {
     }
   }
 
-  Future<bool> submitReport({
+  Future<UserReport?> createReport({
     required ReportType type,
     required double lat,
     required double lng,
@@ -43,7 +43,7 @@ class ReportListNotifier extends StateNotifier<AsyncValue<List<UserReport>>> {
       final trustLevel = isLevel5 ? 5 : (currentKarma >= 700 ? 4 : (currentKarma >= 300 ? 3 : 2));
 
       final report = UserReport(
-        id: '',
+        id: 'rep_${DateTime.now().millisecondsSinceEpoch}',
         type: type,
         lat: lat,
         lng: lng,
@@ -55,17 +55,65 @@ class ReportListNotifier extends StateNotifier<AsyncValue<List<UserReport>>> {
         status: isLevel5 ? 'verified' : 'active',
       );
 
+      // Optimistic instant update on map
+      final currentList = state.value ?? [];
+      state = AsyncValue.data([report, ...currentList.where((r) => r.id != report.id)]);
+
       await _repo.submitReport(report);
 
       // Reward Karma points (+15 for Level 5, +10 for standard)
       final karmaBonus = isLevel5 ? 15 : 10;
       _ref.read(userKarmaProvider.notifier).state += karmaBonus;
 
-      await loadReports();
-      return true;
+      return report;
     } catch (_) {
-      return false;
+      return null;
     }
+  }
+
+  Future<bool> submitReport({
+    required ReportType type,
+    required double lat,
+    required double lng,
+    String? address,
+    String? note,
+  }) async {
+    final report = await createReport(
+      type: type,
+      lat: lat,
+      lng: lng,
+      address: address,
+      note: note,
+    );
+    return report != null;
+  }
+
+  void updateReportLocationOptimistic({
+    required String id,
+    required double lat,
+    required double lng,
+  }) {
+    final currentList = state.value ?? [];
+    final idx = currentList.indexWhere((r) => r.id == id);
+    if (idx == -1) return;
+
+    final updated = currentList[idx].copyWith(lat: lat, lng: lng);
+    final newList = List<UserReport>.from(currentList);
+    newList[idx] = updated;
+    state = AsyncValue.data(newList);
+  }
+
+  Future<void> updateReportLocation({
+    required String id,
+    required double lat,
+    required double lng,
+  }) async {
+    updateReportLocationOptimistic(id: id, lat: lat, lng: lng);
+    final currentList = state.value ?? [];
+    final item = currentList.firstWhere((r) => r.id == id, orElse: () => currentList.first);
+    try {
+      await _repo.submitReport(item);
+    } catch (_) {}
   }
 
   Future<void> upvote(String id) async {

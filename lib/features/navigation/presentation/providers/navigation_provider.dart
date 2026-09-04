@@ -2,22 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:navigator/core/services/voice_copilot_service.dart';
 import 'package:navigator/features/map_radar/presentation/providers/map_radar_provider.dart';
-import 'package:navigator/features/navigation/data/mock_route_repository.dart';
-import 'package:navigator/features/navigation/data/rest_route_repository.dart';
+import 'package:navigator/features/navigation/data/osrm_route_repository.dart';
 import 'package:navigator/features/navigation/domain/models/navigation_step.dart';
 import 'package:navigator/features/navigation/domain/models/route_info.dart';
 import 'package:navigator/features/navigation/domain/repositories/route_repository.dart';
 import 'package:navigator/features/settings/presentation/providers/settings_provider.dart';
 
-// Route Repository Provider
+// Route Repository Provider using live OpenStreetMap OSRM engine
 final routeRepositoryProvider = Provider<RouteRepository>((ref) {
-  final settings = ref.watch(settingsNotifierProvider);
-  if (settings.useMockData) {
-    return MockRouteRepository();
-  } else {
-    final apiClient = ref.watch(apiClientProvider);
-    return RestRouteRepository(apiClient);
-  }
+  return OsrmRouteRepository();
 });
 
 // Route Planning State

@@ -21,11 +21,21 @@ class AiAgentScreen extends ConsumerStatefulWidget {
 class _AiAgentScreenState extends ConsumerState<AiAgentScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -270,88 +280,134 @@ class _AiAgentScreenState extends ConsumerState<AiAgentScreen> {
               ),
             ),
 
-          // 4. iOS iMessage Style Input Bar
+          // 4. Map-style Search Input Bar
           ClipRect(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F172A).withOpacity(0.85) : Colors.white,
+                  color: isDark ? const Color(0xFF0F172A).withOpacity(0.85) : Colors.white.withOpacity(0.92),
                   border: Border(
                     top: BorderSide(
                       color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFE5E5EA),
+                      width: 0.8,
                     ),
                   ),
                 ),
                 child: Row(
                   children: [
-                    // Text Field
+                    // Text Field Container (clean, uniform background, no search icon)
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF2F2F7),
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF2F2F7),
                           borderRadius: BorderRadius.circular(22),
                           border: Border.all(
-                            color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFE5E5EA),
+                            color: _focusNode.hasFocus
+                                ? const Color(0xFF007AFF)
+                                : Colors.transparent,
+                            width: 1.5,
                           ),
                         ),
-                        child: TextField(
-                          controller: _textController,
-                          style: TextStyle(color: textColor, fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: tr.tr('type_a_message'),
-                            hintStyle: TextStyle(color: subtextColor, fontSize: 13),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Center(
+                          child: TextField(
+                            controller: _textController,
+                            focusNode: _focusNode,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              filled: false,
+                              fillColor: Colors.transparent,
+                              hintText: tr.tr('type_a_message'),
+                              hintStyle: TextStyle(
+                                color: isDark ? Colors.white.withOpacity(0.45) : const Color(0xFF8E8E93),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onSubmitted: (val) => _sendMessage(),
                           ),
-                          onSubmitted: (val) => _sendMessage(),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
 
-                    // Microphone Button
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.mediumImpact();
-                        ref.read(aiChatProvider.notifier).toggleVoiceRecording();
+                    // Dynamic Action Button (Mic -> Send button when text is entered)
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _textController,
+                      builder: (context, val, _) {
+                        final hasText = val.text.trim().isNotEmpty;
+
+                        if (hasText) {
+                          // Send Button
+                          return GestureDetector(
+                            onTap: () => _sendMessage(),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: brandColor,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: brandColor.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                CupertinoIcons.arrow_up,
+                                color: isDark ? Colors.black : Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          );
+                        } else {
+                          // Microphone Button
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              ref.read(aiChatProvider.notifier).toggleVoiceRecording();
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: chatState.isListening
+                                    ? const Color(0xFFFF3B30)
+                                    : (isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFF2F2F7)),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isDark ? Colors.white.withOpacity(0.14) : const Color(0xFFE5E5EA),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Icon(
+                                chatState.isListening ? CupertinoIcons.mic_fill : CupertinoIcons.mic,
+                                color: chatState.isListening ? Colors.white : brandColor,
+                                size: 20,
+                              ),
+                            ),
+                          );
+                        }
                       },
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: chatState.isListening
-                              ? const Color(0xFFFF3B30)
-                              : (isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFF2F2F7)),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          chatState.isListening ? CupertinoIcons.mic_fill : CupertinoIcons.mic,
-                          color: chatState.isListening ? Colors.white : brandColor,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Send Button
-                    GestureDetector(
-                      onTap: () => _sendMessage(),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: brandColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          CupertinoIcons.arrow_up,
-                          color: isDark ? Colors.black : Colors.white,
-                          size: 20,
-                        ),
-                      ),
                     ),
                   ],
                 ),

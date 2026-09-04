@@ -1,9 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:navigator/core/constants/app_colors.dart';
+import 'package:navigator/core/services/driving_behavior_service.dart';
+import 'package:navigator/features/map_radar/presentation/providers/map_radar_provider.dart';
+import 'package:navigator/features/profile/presentation/providers/profile_provider.dart';
+import 'package:navigator/features/reports/presentation/widgets/potential_violations_sheet.dart';
 
-class DrivingAnalyticsReportView extends StatefulWidget {
+class DrivingAnalyticsReportView extends ConsumerStatefulWidget {
   final bool isDark;
 
   const DrivingAnalyticsReportView({
@@ -12,31 +17,43 @@ class DrivingAnalyticsReportView extends StatefulWidget {
   });
 
   @override
-  State<DrivingAnalyticsReportView> createState() => _DrivingAnalyticsReportViewState();
+  ConsumerState<DrivingAnalyticsReportView> createState() => _DrivingAnalyticsReportViewState();
 }
 
-class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView> {
+class _DrivingAnalyticsReportViewState extends ConsumerState<DrivingAnalyticsReportView> {
   int _selectedPeriod = 1; // 0: Bugun, 1: Bu hafta, 2: Bu oy
-  int _selectedDayIndex = 4; // Default to Juma (Friday)
+  int _selectedDayIndex = 0;
 
-  final List<Map<String, dynamic>> _weekDays = [
-    {'day': 'Du', 'km': 42.0, 'score': 98, 'fines': 1},
-    {'day': 'Se', 'km': 68.5, 'score': 95, 'fines': 2},
-    {'day': 'Ch', 'km': 54.0, 'score': 92, 'fines': 1},
-    {'day': 'Pa', 'km': 39.0, 'score': 99, 'fines': 0},
-    {'day': 'Ju', 'km': 76.5, 'score': 96, 'fines': 3},
-    {'day': 'Sh', 'km': 44.0, 'score': 94, 'fines': 1},
-    {'day': 'Ya', 'km': 18.5, 'score': 100, 'fines': 0},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _selectedDayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final driving = ref.watch(drivingBehaviorProvider);
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final radars = ref.watch(radarListProvider).valueOrNull ?? [];
+
+    final todayWeekday = DateTime.now().weekday; // 1 = Monday .. 7 = Sunday
+    final dayNames = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+    final weekDays = List.generate(7, (idx) {
+      final isToday = (idx + 1) == todayWeekday;
+      return {
+        'day': dayNames[idx],
+        'km': isToday ? driving.weeklyDistanceKm : 0.0,
+        'score': isToday ? driving.safetyScore.toInt() : 100,
+        'fines': isToday ? driving.violationCount : 0,
+      };
+    });
+
+    final selectedDay = weekDays[_selectedDayIndex.clamp(0, 6)];
+
     final textColor = widget.isDark ? Colors.white : const Color(0xFF1C1C1E);
     final subtextColor = widget.isDark ? Colors.white.withOpacity(0.55) : const Color(0xFF64748B);
     final cardBg = widget.isDark ? const Color(0xFF0F172A).withOpacity(0.85) : Colors.white;
     final cardBorder = widget.isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFE2E8F0);
-
-    final selectedDay = _weekDays[_selectedDayIndex];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
@@ -94,25 +111,27 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
                         width: 78,
                         height: 78,
                         child: CircularProgressIndicator(
-                          value: 0.96,
+                          value: (driving.safetyScore / 100.0).clamp(0.0, 1.0),
                           strokeWidth: 8,
                           backgroundColor: Colors.white.withOpacity(0.15),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF34C759)),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            driving.safetyScore >= 85 ? const Color(0xFF34C759) : const Color(0xFFFF9500),
+                          ),
                         ),
                       ),
-                      const Column(
+                      Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '96',
-                            style: TextStyle(
+                            '${driving.safetyScore.toInt()}',
+                            style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                               letterSpacing: -1,
                             ),
                           ),
-                          Text(
+                          const Text(
                             '/ 100',
                             style: TextStyle(
                               fontSize: 10,
@@ -178,48 +197,90 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
                 ],
               ),
               const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.25),
+              // Bo'ysunilmagan holatlar va ehtimoliy jarimalar kartasi (Batafsil ma'lumot)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.12)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF9500).withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text('💰', style: TextStyle(fontSize: 16)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '~1,850,000 so\'m tejalgan jarimalar',
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFFFD60A),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Bu hafta 18 ta radar va kamera haqida o\'z vaqtida ogohlantirildi',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.white.withOpacity(0.7),
-                            ),
-                          ),
-                        ],
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    PotentialViolationsSheet.show(
+                      context,
+                      periodIndex: _selectedPeriod,
+                      isDark: widget.isDark,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.28),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFFF3B30).withOpacity(0.4),
+                        width: 1.2,
                       ),
                     ),
-                  ],
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: (driving.violationCount == 0 ? const Color(0xFF34C759) : const Color(0xFFFF3B30)).withOpacity(0.22),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            driving.violationCount == 0
+                                ? CupertinoIcons.checkmark_shield_fill
+                                : CupertinoIcons.exclamationmark_triangle_fill,
+                            color: driving.violationCount == 0 ? const Color(0xFF34C759) : const Color(0xFFFF453A),
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                driving.violationCount == 0
+                                    ? 'Qoidabuzarliklar qayd etilmadi'
+                                    : '${driving.violationCount} ta xavfli holat qayd etildi',
+                                style: TextStyle(
+                                  fontSize: 12.8,
+                                  fontWeight: FontWeight.w800,
+                                  color: driving.violationCount == 0 ? const Color(0xFF34C759) : const Color(0xFFFFD60A),
+                                  height: 1.22,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                driving.violationCount == 0
+                                    ? 'Barcha tezlik va yo\'l me\'yorlariga to\'liq rioya qilinmoqda'
+                                    : 'Tezlik va manyovrlar telematikada tahlil qilinmoqda',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white.withOpacity(0.85),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            CupertinoIcons.chevron_right,
+                            color: Colors.white,
+                            size: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -262,7 +323,7 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Jami: 342.5 km (Kunlik o\'rtacha 48.9 km)',
+                          'Jami: ${driving.weeklyDistanceKm.toStringAsFixed(1)} km (Haftalik masofa)',
                           style: TextStyle(fontSize: 12, color: subtextColor),
                         ),
                       ],
@@ -294,8 +355,8 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(_weekDays.length, (idx) {
-                    final item = _weekDays[idx];
+                  children: List.generate(weekDays.length, (idx) {
+                    final item = weekDays[idx];
                     final isSelected = idx == _selectedDayIndex;
                     final km = item['km'] as double;
                     final heightFraction = (km / 80.0).clamp(0.15, 1.0);
@@ -389,8 +450,8 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
               icon: CupertinoIcons.gauge,
               iconColor: const Color(0xFF007AFF),
               title: 'O\'rtacha Tezlik',
-              value: '48 km/h',
-              badge: 'Shahar bo\'ylab',
+              value: '${driving.weeklyDistanceKm > 0 ? (driving.weeklyDistanceKm / 4.0).clamp(20.0, 70.0).toInt() : 0} km/h',
+              badge: 'Telematika',
               cardBg: cardBg,
               cardBorder: cardBorder,
               textColor: textColor,
@@ -400,8 +461,8 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
               icon: CupertinoIcons.camera_fill,
               iconColor: const Color(0xFFFF3B30),
               title: 'Radarlar',
-              value: '18 ta',
-              badge: '100% ogohlantirildi',
+              value: '${radars.length} ta',
+              badge: 'Supabase',
               cardBg: cardBg,
               cardBorder: cardBorder,
               textColor: textColor,
@@ -411,8 +472,8 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
               icon: CupertinoIcons.drop_fill,
               iconColor: const Color(0xFF34C759),
               title: 'Tejalgan Yoqilg\'i',
-              value: '~5.2 litr',
-              badge: '+58,000 so\'m tejam',
+              value: '+${driving.fuelSavedPercentage.toInt()}%',
+              badge: 'Eko hisob',
               cardBg: cardBg,
               cardBorder: cardBorder,
               textColor: textColor,
@@ -422,8 +483,8 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
               icon: CupertinoIcons.flame_fill,
               iconColor: const Color(0xFFFF9500),
               title: 'Jarimasiz Harakat',
-              value: '18 kun',
-              badge: 'Ketma-ket rekord',
+              value: '${profile?.cleanTripsCount ?? 0} kun',
+              badge: 'Intizom',
               cardBg: cardBg,
               cardBorder: cardBorder,
               textColor: textColor,
@@ -465,101 +526,45 @@ class _DrivingAnalyticsReportViewState extends State<DrivingAnalyticsReportView>
                 style: TextStyle(fontSize: 12, color: subtextColor),
               ),
               const SizedBox(height: 16),
-              _buildHabitRow('Tezlik chegarasiga rioya qilish', 0.98, '98%', const Color(0xFF34C759), textColor, subtextColor),
-              const SizedBox(height: 14),
-              _buildHabitRow('Silliq tormozlanish va tezlanish', 0.94, '94%', const Color(0xFF007AFF), textColor, subtextColor),
-              const SizedBox(height: 14),
-              _buildHabitRow('Rulda diqqat (mobil telefonsiz)', 0.99, '99%', const Color(0xFF34C759), textColor, subtextColor),
-              const SizedBox(height: 14),
-              _buildHabitRow('Kechki vaqtdagi ehtiyotkorlik', 0.92, '92%', const Color(0xFFFF9500), textColor, subtextColor),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-
-        // 6. AI Driving Copilot Advisory
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: widget.isDark
-                  ? [const Color(0xFF1E1B4B), const Color(0xFF0F172A)]
-                  : [const Color(0xFFEFF6FF), Colors.white],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: const Color(0xFF6366F1).withOpacity(widget.isDark ? 0.4 : 0.25),
-              width: 1.2,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(CupertinoIcons.sparkles, color: Color(0xFF6366F1), size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'AI Yo\'l Maslahatchisi',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF6366F1),
-                    ),
-                  ),
-                ],
+              _buildHabitRow(
+                'Tezlik chegarasiga rioya qilish',
+                (driving.safetyScore / 100.0).clamp(0.0, 1.0),
+                '${driving.safetyScore.toInt()}%',
+                const Color(0xFF34C759),
+                textColor,
+                subtextColor,
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Samarqand shahri bo\'ylab haftalik haydashingiz juda yuqori intizomda o\'tdi. Mirzo Ulug\'bek va Registon ko\'chalarida o\'rtacha 54 km/soat me\'yorida harakatlanganingiz uchun yoqilg\'i sarfi 12% ga tejaldi.\n\nTavsiya: Zargaron ko\'chasida soat 18:00 dan keyin piyodalar oqimi yuqori bo\'ladi, ehtiyot bo\'ling.',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.45,
-                  color: widget.isDark ? Colors.white.withOpacity(0.85) : const Color(0xFF334155),
-                ),
+              const SizedBox(height: 14),
+              _buildHabitRow(
+                'Silliq tormozlanish',
+                (1.0 - (driving.harshBrakingCount * 0.05)).clamp(0.5, 1.0),
+                '${((1.0 - (driving.harshBrakingCount * 0.05)).clamp(0.5, 1.0) * 100).toInt()}%',
+                const Color(0xFF007AFF),
+                textColor,
+                subtextColor,
+              ),
+              const SizedBox(height: 14),
+              _buildHabitRow(
+                'Silliq tezlanish',
+                (1.0 - (driving.rapidAccelerationCount * 0.05)).clamp(0.5, 1.0),
+                '${((1.0 - (driving.rapidAccelerationCount * 0.05)).clamp(0.5, 1.0) * 100).toInt()}%',
+                const Color(0xFF34C759),
+                textColor,
+                subtextColor,
+              ),
+              const SizedBox(height: 14),
+              _buildHabitRow(
+                'Ehtiyotkor burilish',
+                (1.0 - (driving.sharpCorneringCount * 0.05)).clamp(0.5, 1.0),
+                '${((1.0 - (driving.sharpCorneringCount * 0.05)).clamp(0.5, 1.0) * 100).toInt()}%',
+                const Color(0xFFFF9500),
+                textColor,
+                subtextColor,
               ),
             ],
           ),
         ),
         const SizedBox(height: 20),
-
-        // 7. Share / Export Report Button
-        ElevatedButton.icon(
-          onPressed: () {
-            HapticFeedback.mediumImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Haftalik hisobot tayyorlandi va saqlandi!'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Color(0xFF34C759),
-              ),
-            );
-          },
-          icon: const Icon(CupertinoIcons.share_up, size: 18),
-          label: const Text(
-            'Hisobotni PDF / Rasm qilib ulashish',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: widget.isDark ? const Color(0xFF1E293B) : Colors.white,
-            foregroundColor: widget.isDark ? Colors.white : const Color(0xFF0F172A),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: cardBorder),
-            ),
-            elevation: 2,
-          ),
-        ),
       ],
     );
   }

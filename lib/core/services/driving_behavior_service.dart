@@ -40,10 +40,10 @@ class DrivingBehaviorState {
   final List<DrivingEvent> recentEvents;
 
   const DrivingBehaviorState({
-    this.safetyScore = 96.0,
-    this.weeklyDistanceKm = 240.0,
+    this.safetyScore = 100.0,
+    this.weeklyDistanceKm = 0.0,
     this.violationCount = 0,
-    this.fuelSavedPercentage = 8.0,
+    this.fuelSavedPercentage = 0.0,
     this.harshBrakingCount = 0,
     this.rapidAccelerationCount = 0,
     this.sharpCorneringCount = 0,
@@ -52,6 +52,15 @@ class DrivingBehaviorState {
   });
 
   String getWeeklySummary(String langCode) {
+    if (weeklyDistanceKm == 0.0) {
+      if (langCode == 'ru') {
+        return 'Поездки на этой неделе еще не зафиксированы. Соблюдайте правила дорожного движения!';
+      } else if (langCode == 'uz') {
+        return 'Bu haftada safarlar hali qayd etilmadi. Yo\'l harakati qoidalariga rioya qiling!';
+      } else {
+        return 'No trips recorded yet this week. Drive safely and observe speed limits!';
+      }
+    }
     if (langCode == 'ru') {
       return 'На этой неделе вы проехали ${weeklyDistanceKm.toInt()} км. $violationCount нарушений. Ваш рейтинг безопасности: ${safetyScore.toInt()}/100. Вы сэкономили ${fuelSavedPercentage.toInt()}% топлива!';
     } else if (langCode == 'uz') {

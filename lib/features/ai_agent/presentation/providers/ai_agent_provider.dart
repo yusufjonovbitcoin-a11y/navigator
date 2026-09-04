@@ -1,21 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:navigator/features/ai_agent/data/mock_ai_agent_service.dart';
-import 'package:navigator/features/ai_agent/data/rest_ai_agent_service.dart';
+import 'package:navigator/features/ai_agent/data/supabase_ai_agent_service.dart';
 import 'package:navigator/features/ai_agent/domain/models/ai_response.dart';
 import 'package:navigator/features/ai_agent/domain/models/driving_insights.dart';
 import 'package:navigator/features/ai_agent/domain/services/ai_agent_service.dart';
-import 'package:navigator/features/settings/presentation/providers/settings_provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-// AI Service Provider with dynamic Mock / REST injection
+// AI Service Provider powered by live Supabase context
 final aiAgentServiceProvider = Provider<AiAgentService>((ref) {
-  final settings = ref.watch(settingsNotifierProvider);
-  if (settings.useMockData) {
-    return MockAiAgentService();
-  } else {
-    final apiClient = ref.watch(apiClientProvider);
-    return RestAiAgentService(apiClient);
-  }
+  return SupabaseAiAgentService();
 });
 
 // Weekly Insights Future Provider
@@ -64,12 +56,12 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
   void _initChat() {
     final welcome = AiResponse(
-      text: '👋 **Hello! I am your AI Driving Copilot.**\nI monitor active radars, road hazards, and predict high-risk speed trap zones in real-time. How can I help you today?',
+      text: '👋 **Salom! Men sizning sun\'iy intellekt yo\'l yordamchingizman.**\nRadarlar, yo\'l holati va yo\'l harakati xavfsizligi bo\'yicha qanday yordam bera olaman?',
       suggestions: [
-        'What awaits me on the road today?',
-        'Best route to Chilonzor?',
-        'How was my driving this week?',
-        'Show active radar hotspots',
+        'Yaqin atrofda qanday radarlar bor?',
+        'Bugungi yo\'l harakati va tirbandliklar',
+        'Tezlik me\'yorlari va jarimalar',
+        'Xavfsiz haydash bo\'yicha maslahatlar',
       ],
       timestamp: DateTime.now(),
     );
@@ -94,7 +86,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
       );
     } catch (e) {
       final errorMsg = AiResponse(
-        text: 'Sorry, I could not process your request at this moment. Please check network connection.',
+        text: 'Kechirasiz, so\'rovingizni qayta ishlashda xatolik yuz berdi. Internet aloqasini tekshiring.',
         timestamp: DateTime.now(),
       );
       state = state.copyWith(

@@ -49,7 +49,7 @@ class _VoiceAssistantOverlayState extends ConsumerState<VoiceAssistantOverlay> {
             '«Сколько осталось до Чиланзара?»',
             '«Есть ли радары по пути?»',
             '«Где ближайшая метановая заправка?»',
-            '«Впереди авария»',
+            '«Впереди стационарная камера»',
           ]
         : isUzbek
             ? [
@@ -58,7 +58,7 @@ class _VoiceAssistantOverlayState extends ConsumerState<VoiceAssistantOverlay> {
                 '«Chilonzorga qancha qoldi?»',
                 '«Yo\'lda qanday radarlar bor?»',
                 '«Eng yaqin metan zapravka»',
-                '«Oldinda avariya bo\'ldi»',
+                '«Oldinda stasionar kamera bor»',
               ]
             : [
                 '«Hey Radar, police patrol ahead»',
@@ -66,7 +66,7 @@ class _VoiceAssistantOverlayState extends ConsumerState<VoiceAssistantOverlay> {
                 '«How much time to Chilonzor?»',
                 '«Show speed cameras»',
                 '«Find closest methane gas station»',
-                '«Car accident reported»',
+                '«Speed camera ahead»',
               ];
 
     return ClipRRect(

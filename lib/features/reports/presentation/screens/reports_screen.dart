@@ -8,7 +8,6 @@ import 'package:navigator/features/map_radar/presentation/widgets/quick_report_s
 import 'package:navigator/features/reports/domain/models/user_report.dart';
 import 'package:navigator/features/reports/presentation/providers/report_provider.dart';
 import 'package:navigator/features/reports/presentation/widgets/driving_analytics_report_view.dart';
-import 'package:navigator/features/reports/presentation/widgets/my_contribution_report_view.dart';
 import 'package:navigator/features/reports/presentation/widgets/report_item_card.dart';
 import 'package:navigator/features/settings/presentation/providers/settings_provider.dart';
 
@@ -20,7 +19,7 @@ class ReportsScreen extends ConsumerStatefulWidget {
 }
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
-  int _selectedSegment = 0; // 0 = Haydash Tahlili, 1 = Jonli Xabarlar, 2 = Mening Hissam
+  int _selectedSegment = 0; // 0 = Haydash Tahlili, 1 = Jonli Xabarlar
   ReportType? _selectedFilter;
 
   void _openQuickReportSheet() {
@@ -42,7 +41,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final settings = ref.watch(settingsNotifierProvider);
     final isDark = settings.isDarkMode;
     final reportsAsync = ref.watch(reportListProvider);
-    final karma = ref.watch(userKarmaProvider);
 
     final textColor = isDark ? Colors.white : const Color(0xFF1C1C1E);
     final subtextColor = isDark ? Colors.white.withOpacity(0.55) : const Color(0xFF64748B);
@@ -54,9 +52,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          _selectedSegment == 0
-              ? 'Tahlil va Hisobot'
-              : (_selectedSegment == 1 ? 'Yo\'l Xabarlari' : 'Mening Hissam'),
+          _selectedSegment == 0 ? 'Tahlil va Hisobot' : 'Yo\'l Xabarlari',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -64,47 +60,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             color: textColor,
           ),
         ),
-        actions: [
-          // Karma points pill
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF9500).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFF9500).withOpacity(0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(CupertinoIcons.star_fill, size: 12, color: Color(0xFFFF9500)),
-                const SizedBox(width: 4),
-                Text(
-                  '$karma Karma',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFFFF9500)),
-                ),
-              ],
-            ),
-          ),
-          // Add Report Action Button
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: brandColor,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(CupertinoIcons.plus, color: Colors.black, size: 18),
-            ),
-            onPressed: _openQuickReportSheet,
-          ),
-          const SizedBox(width: 8),
-        ],
         centerTitle: false,
       ),
       body: Column(
         children: [
-          // 3-Segment Professional Switcher
+          // 2-Segment Switcher (Tahlil va Xabarlar)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SizedBox(
@@ -115,7 +75,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 thumbColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                 children: {
                   0: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -124,11 +84,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           size: 14,
                           color: _selectedSegment == 0 ? brandColor : subtextColor,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 6),
                         Text(
                           'Tahlil',
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 13,
                             fontWeight: _selectedSegment == 0 ? FontWeight.w800 : FontWeight.w500,
                             color: _selectedSegment == 0 ? brandColor : subtextColor,
                           ),
@@ -137,7 +97,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     ),
                   ),
                   1: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -146,35 +106,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           size: 14,
                           color: _selectedSegment == 1 ? brandColor : subtextColor,
                         ),
-                        const SizedBox(width: 5),
+                        const SizedBox(width: 6),
                         Text(
                           'Xabarlar',
                           style: TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 13,
                             fontWeight: _selectedSegment == 1 ? FontWeight.w800 : FontWeight.w500,
                             color: _selectedSegment == 1 ? brandColor : subtextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  2: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          CupertinoIcons.shield_fill,
-                          size: 14,
-                          color: _selectedSegment == 2 ? const Color(0xFFFF9500) : subtextColor,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          'Hissam',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: _selectedSegment == 2 ? FontWeight.w800 : FontWeight.w500,
-                            color: _selectedSegment == 2 ? const Color(0xFFFF9500) : subtextColor,
                           ),
                         ),
                       ],
@@ -195,38 +133,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           Expanded(
             child: _selectedSegment == 0
                 ? DrivingAnalyticsReportView(isDark: isDark)
-                : (_selectedSegment == 2
-                    ? MyContributionReportView(
-                        isDark: isDark,
-                        onAddReport: _openQuickReportSheet,
-                      )
-                    : _buildLiveCommunityReportsTab(
-                        reportsAsync: reportsAsync,
-                        isDark: isDark,
-                        brandColor: brandColor,
-                        textColor: textColor,
-                        subtextColor: subtextColor,
-                        tr: tr,
-                      )),
+                : _buildLiveCommunityReportsTab(
+                    reportsAsync: reportsAsync,
+                    isDark: isDark,
+                    brandColor: brandColor,
+                    textColor: textColor,
+                    subtextColor: subtextColor,
+                    tr: tr,
+                  ),
           ),
         ],
       ),
-      floatingActionButton: _selectedSegment == 1
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 75),
-              child: FloatingActionButton.extended(
-                backgroundColor: brandColor,
-                foregroundColor: isDark ? Colors.black : Colors.white,
-                elevation: 4,
-                icon: const Icon(CupertinoIcons.plus_circle_fill, size: 20),
-                label: const Text(
-                  'Xavf / Radar qo\'shish',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
-                ),
-                onPressed: _openQuickReportSheet,
-              ),
-            )
-          : null,
     );
   }
 
@@ -238,6 +155,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     required Color subtextColor,
     required AppLocalizations tr,
   }) {
+    final allReports = reportsAsync.value ?? [];
+    final ypxCount = allReports.where((r) => r.type == ReportType.policePatrol).length;
+    final radarCount = allReports.where((r) => r.type == ReportType.stationaryRadar).length;
+    final hazardCount = allReports.where((r) => r.type == ReportType.pothole || r.type == ReportType.roadwork).length;
+
     return Column(
       children: [
         // Quick Live Incidents Summary Bar
@@ -254,16 +176,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildLiveStatPill('🚔 4 YPX', const Color(0xFF007AFF)),
-              _buildLiveStatPill('📷 8 Radar', const Color(0xFFFF3B30)),
-              _buildLiveStatPill('⚠️ 3 Nosoz', const Color(0xFFFF9500)),
-              _buildLiveStatPill('🚗 1 Avariya', const Color(0xFFA855F7)),
+              _buildLiveStatPill('🚔 $ypxCount YPX', const Color(0xFF007AFF)),
+              _buildLiveStatPill('📷 $radarCount Radar', const Color(0xFFFF3B30)),
+              _buildLiveStatPill('⚠️ $hazardCount Nosoz', const Color(0xFFFF9500)),
             ],
           ),
         ),
         const SizedBox(height: 6),
 
-        // Quick Filter Chips (All, Radar, Police, Accident, Pothole)
+        // Quick Filter Chips (All, Radar, Police, Pothole)
         SizedBox(
           height: 38,
           child: ListView(
@@ -275,8 +196,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               _buildFilterChip('Radarlar', ReportType.stationaryRadar, AppColors.radarRed, isDark),
               const SizedBox(width: 8),
               _buildFilterChip('YPX Patrul', ReportType.policePatrol, AppColors.policeBlue, isDark),
-              const SizedBox(width: 8),
-              _buildFilterChip('Avariyalar', ReportType.accident, const Color(0xFFEF4444), isDark),
               const SizedBox(width: 8),
               _buildFilterChip('Chuqurlar', ReportType.pothole, const Color(0xFFA855F7), isDark),
             ],

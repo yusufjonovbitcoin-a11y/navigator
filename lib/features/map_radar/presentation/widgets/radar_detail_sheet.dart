@@ -100,6 +100,76 @@ class RadarDetailSheet extends StatelessWidget {
               ],
             ),
           ),
+          if (radar.features.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Qo\'shimcha nazorat qilinadi:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade400,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: radar.features.map((f) {
+                String label;
+                IconData icon;
+                Color color;
+                switch (f) {
+                  case 'kamar':
+                    label = 'Xavfsizlik kamari';
+                    icon = Icons.airline_seat_recline_normal_rounded;
+                    color = const Color(0xFF10B981);
+                    break;
+                  case 'telefon':
+                    label = 'Rulda telefon';
+                    icon = Icons.phone_iphone_rounded;
+                    color = const Color(0xFF6366F1);
+                    break;
+                  case 'palasa':
+                    label = 'Yo\'l chizig\'i (Palasa)';
+                    icon = Icons.alt_route_rounded;
+                    color = const Color(0xFFF59E0B);
+                    break;
+                  case 'svetofor':
+                    label = 'Svetofor (Qizil)';
+                    icon = Icons.traffic_rounded;
+                    color = const Color(0xFFEF4444);
+                    break;
+                  default:
+                    label = f;
+                    icon = Icons.check_circle_outline;
+                    color = AppColors.primary;
+                }
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: color.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 14, color: color),
+                      const SizedBox(width: 5),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,

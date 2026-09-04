@@ -32,13 +32,25 @@ extension MapStyleExtension on MapStyle {
   String get urlTemplate {
     switch (this) {
       case MapStyle.osmStandard:
-        // Pure OpenStreetMap: 100% Free, open source, no watermarks, no API key required
-        return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+        // Google Maps Standard Driving Tiles: Ultra fast CDN, zero watermarks, 99.99% uptime
+        return 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
       case MapStyle.darkNavigation:
-        // ArcGIS Dark Gray Base: Free, high-contrast night navigation, no watermarks
+        // ArcGIS Dark Gray Base: High-contrast night navigation
         return 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
       case MapStyle.satellite:
-        // ArcGIS Satellite Imagery: Free high-resolution aerial imagery, no watermarks
+        // Google Hybrid Satellite: High-resolution aerial imagery with street labels
+        return 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+    }
+  }
+
+  String? get fallbackUrl {
+    switch (this) {
+      case MapStyle.osmStandard:
+        // OpenStreetMap multi-mirror fallback
+        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      case MapStyle.darkNavigation:
+        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+      case MapStyle.satellite:
         return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
     }
   }
@@ -46,11 +58,11 @@ extension MapStyleExtension on MapStyle {
   List<String> get subdomains {
     switch (this) {
       case MapStyle.osmStandard:
-        return const [];
+        return const ['0', '1', '2', '3'];
       case MapStyle.darkNavigation:
         return const [];
       case MapStyle.satellite:
-        return const [];
+        return const ['0', '1', '2', '3'];
     }
   }
 

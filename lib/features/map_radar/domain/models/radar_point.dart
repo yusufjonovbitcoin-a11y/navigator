@@ -12,15 +12,15 @@ extension RadarTypeExtension on RadarType {
   String get displayName {
     switch (this) {
       case RadarType.stationary:
-        return 'Speed Camera';
+        return 'Kamera';
       case RadarType.mobile:
-        return 'Police Patrol';
+        return 'Radar';
       case RadarType.speedTrap:
-        return 'Speed Trap';
+        return 'Radar';
       case RadarType.redLight:
-        return 'Red Light Cam';
+        return 'Kamera (Svetofor)';
       case RadarType.hazard:
-        return 'Hazard Warning';
+        return 'Xavfli joy';
     }
   }
 
@@ -51,6 +51,7 @@ class RadarPoint {
   final String title;
   final String? address;
   final double? distanceMeters;
+  final List<String> features;
 
   const RadarPoint({
     required this.id,
@@ -63,6 +64,7 @@ class RadarPoint {
     required this.title,
     this.address,
     this.distanceMeters,
+    this.features = const [],
   });
 
   LatLng get latLng => LatLng(lat, lng);
@@ -78,6 +80,7 @@ class RadarPoint {
     String? title,
     String? address,
     double? distanceMeters,
+    List<String>? features,
   }) {
     return RadarPoint(
       id: id ?? this.id,
@@ -90,6 +93,7 @@ class RadarPoint {
       title: title ?? this.title,
       address: address ?? this.address,
       distanceMeters: distanceMeters ?? this.distanceMeters,
+      features: features ?? this.features,
     );
   }
 
@@ -108,6 +112,7 @@ class RadarPoint {
       title: json['title'] as String? ?? 'Speed Camera',
       address: json['address'] as String?,
       distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
+      features: (json['features'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
     );
   }
 
@@ -123,6 +128,7 @@ class RadarPoint {
       'title': title,
       'address': address,
       'distanceMeters': distanceMeters,
+      'features': features,
     };
   }
 

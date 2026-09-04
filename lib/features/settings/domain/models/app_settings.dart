@@ -30,7 +30,7 @@ class AppSettings {
       alertDistanceMeters: 500,
       voiceAlertsEnabled: true,
       soundChimesEnabled: true,
-      useMockData: true,
+      useMockData: false,
       apiBaseUrl: ApiEndpoints.defaultBaseUrl,
     );
   }

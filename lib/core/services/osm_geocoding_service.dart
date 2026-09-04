@@ -7,6 +7,8 @@ class OsmPlace {
   final double lat;
   final double lng;
   final String type;
+  final String? uri;
+  final String? subtitle;
 
   const OsmPlace({
     required this.displayName,
@@ -14,9 +16,31 @@ class OsmPlace {
     required this.lat,
     required this.lng,
     required this.type,
+    this.uri,
+    this.subtitle,
   });
 
   LatLng get latLng => LatLng(lat, lng);
+
+  OsmPlace copyWith({
+    String? displayName,
+    String? name,
+    double? lat,
+    double? lng,
+    String? type,
+    String? uri,
+    String? subtitle,
+  }) {
+    return OsmPlace(
+      displayName: displayName ?? this.displayName,
+      name: name ?? this.name,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      type: type ?? this.type,
+      uri: uri ?? this.uri,
+      subtitle: subtitle ?? this.subtitle,
+    );
+  }
 
   factory OsmPlace.fromJson(Map<String, dynamic> json) {
     final rawName = json['name'] as String?;
@@ -56,14 +80,31 @@ class OsmGeocodingService {
           'q': query,
           'format': 'json',
           'addressdetails': 1,
-          'limit': 6,
-          'countrycodes': 'uz', // Uzbekistan first, or global
+          'limit': 8,
+          'countrycodes': 'uz', // Uzbekistan only
+          'viewbox': '55.99,45.58,73.15,37.18',
+          'bounded': 1,
         },
       );
 
       if (response.statusCode == 200 && response.data is List) {
         final list = response.data as List;
-        return list.map((item) => OsmPlace.fromJson(item as Map<String, dynamic>)).toList();
+        final results = <OsmPlace>[];
+        for (final item in list) {
+          if (item is! Map<String, dynamic>) continue;
+          final address = item['address'] as Map<String, dynamic>?;
+          final countryCode = (address?['country_code'] as String?)?.toLowerCase();
+          if (countryCode != null && countryCode.isNotEmpty && countryCode != 'uz') {
+            continue;
+          }
+          final place = OsmPlace.fromJson(item);
+          // Strict geographic bounds of Uzbekistan
+          if (place.lat < 37.0 || place.lat > 45.8 || place.lng < 55.9 || place.lng > 73.3) {
+            continue;
+          }
+          results.add(place);
+        }
+        return results;
       }
       return [];
     } catch (_) {

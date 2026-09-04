@@ -33,7 +33,7 @@ extension ReportTypeExtension on ReportType {
   String get title {
     switch (this) {
       case ReportType.stationaryRadar:
-        return 'Speed Camera';
+        return 'Multi Radar';
       case ReportType.policePatrol:
         return 'Police Radar (GAY)';
       case ReportType.accident:
@@ -67,7 +67,7 @@ extension ReportTypeExtension on ReportType {
   IconData get icon {
     switch (this) {
       case ReportType.stationaryRadar:
-        return Icons.camera_alt_rounded;
+        return Icons.radar_rounded;
       case ReportType.policePatrol:
         return Icons.local_police_rounded;
       case ReportType.accident:
@@ -150,8 +150,8 @@ class UserReport {
   bool get isExpired =>
       DateTime.now().isAfter(expiresAt) || (downvotes >= 2 && downvotes > upvotes);
 
-  /// Level 5 trusted drivers get instant live map publication; others need community votes
-  bool get isVisibleOnMap => !isExpired && (authorTrustLevel >= 5 || upvotes >= 2);
+  /// Live on map as long as it has not expired and has not been downvoted
+  bool get isVisibleOnMap => !isExpired;
 
   UserReport copyWith({
     String? id,
@@ -190,7 +190,9 @@ class UserReport {
       (t) => t.name == json['type'],
       orElse: () => ReportType.stationaryRadar,
     );
-    final timestamp = DateTime.tryParse(json['created_at']?.toString() ?? json['timestamp']?.toString() ?? '') ?? DateTime.now();
+    final rawDate = json['created_at']?.toString() ?? json['timestamp']?.toString() ?? '';
+    final parsed = DateTime.tryParse(rawDate);
+    final timestamp = parsed != null ? parsed.toLocal() : DateTime.now();
 
     return UserReport(
       id: json['id'] as String,
@@ -208,7 +210,7 @@ class UserReport {
           : (json['authorTrustLevel'] as int? ?? 5),
       status: json['status'] as String? ?? 'active',
       expiresAt: json['expiresAt'] != null
-          ? DateTime.tryParse(json['expiresAt'].toString())
+          ? DateTime.tryParse(json['expiresAt'].toString())?.toLocal() ?? timestamp.add(type.defaultLifespan)
           : timestamp.add(type.defaultLifespan),
     );
   }
@@ -242,7 +244,7 @@ class UserReport {
       'downvotes': downvotes,
       'author_id': userId,
       'author_karma': authorTrustLevel * 300,
-      'created_at': timestamp.toIso8601String(),
+      'created_at': timestamp.toUtc().toIso8601String(),
     };
   }
 }

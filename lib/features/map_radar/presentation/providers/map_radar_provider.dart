@@ -12,6 +12,9 @@ final radarRepositoryProvider = Provider<RadarRepository>((ref) {
   return SupabaseRadarRepository();
 });
 
+// Map target focus provider for navigating directly to a specific coordinate
+final mapTargetFocusProvider = StateProvider<LatLng?>((ref) => null);
+
 // Nearby radars state
 class RadarListNotifier extends StateNotifier<AsyncValue<List<RadarPoint>>> {
   final RadarRepository _repo;

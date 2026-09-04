@@ -1,11 +1,10 @@
 import 'package:navigator/core/services/location_service.dart';
 import 'package:navigator/core/services/supabase_service.dart';
-import 'package:navigator/features/map_radar/data/mock_radar_repository.dart';
 import 'package:navigator/features/map_radar/domain/models/radar_point.dart';
 import 'package:navigator/features/map_radar/domain/repositories/radar_repository.dart';
 
 class SupabaseRadarRepository implements RadarRepository {
-  final MockRadarRepository _fallback = MockRadarRepository();
+  List<RadarPoint> _cachedRadars = [];
 
   @override
   Future<List<RadarPoint>> getNearbyRadars({
@@ -20,10 +19,6 @@ class SupabaseRadarRepository implements RadarRepository {
           .order('created_at', ascending: false);
 
       final List<dynamic> data = response as List<dynamic>;
-      if (data.isEmpty) {
-        return await _fallback.getNearbyRadars(lat: lat, lng: lng, radiusKm: radiusKm);
-      }
-
       final radars = data.map((json) {
         final r = RadarPoint.fromJson(json as Map<String, dynamic>);
         final d = LocationService.calculateDistance(lat, lng, r.lat, r.lng);
@@ -32,10 +27,18 @@ class SupabaseRadarRepository implements RadarRepository {
 
       // Sort by proximity
       radars.sort((a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0));
+      _cachedRadars = radars;
       return radars;
     } catch (_) {
-      // Fallback seamlessly if offline
-      return await _fallback.getNearbyRadars(lat: lat, lng: lng, radiusKm: radiusKm);
+      // Return cached real radars if offline
+      if (_cachedRadars.isNotEmpty) {
+        return _cachedRadars.map((r) {
+          final d = LocationService.calculateDistance(lat, lng, r.lat, r.lng);
+          return r.copyWith(distanceMeters: d);
+        }).toList()
+          ..sort((a, b) => (a.distanceMeters ?? 0).compareTo(b.distanceMeters ?? 0));
+      }
+      return [];
     }
   }
 
@@ -56,16 +59,12 @@ class SupabaseRadarRepository implements RadarRepository {
 
   @override
   Future<RadarPoint> getRadarById(String id) async {
-    try {
-      final response = await SupabaseService.client
-          .from('radars')
-          .select()
-          .eq('id', id)
-          .single();
-      return RadarPoint.fromJson(response);
-    } catch (_) {
-      return await _fallback.getRadarById(id);
-    }
+    final response = await SupabaseService.client
+        .from('radars')
+        .select()
+        .eq('id', id)
+        .single();
+    return RadarPoint.fromJson(response);
   }
 
   @override
@@ -78,13 +77,14 @@ class SupabaseRadarRepository implements RadarRepository {
       }).eq('id', id);
       return true;
     } catch (_) {
-      return await _fallback.confirmRadar(id);
+      return false;
     }
   }
 
   Future<bool> addRadar(RadarPoint point) async {
     try {
       await SupabaseService.client.from('radars').insert(point.toSupabase());
+      _cachedRadars.insert(0, point);
       return true;
     } catch (_) {
       return false;

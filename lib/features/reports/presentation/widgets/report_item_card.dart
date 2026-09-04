@@ -78,48 +78,57 @@ class ReportItemCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          timeFormatted,
-                          style: TextStyle(fontSize: 12, color: subtextColor),
-                        ),
-                        if (remainingMins > 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 3,
-                            height: 3,
-                            decoration: BoxDecoration(
+                    RichText(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: timeFormatted,
+                            style: TextStyle(
+                              fontSize: 11.5,
                               color: subtextColor,
-                              shape: BoxShape.circle,
+                              fontFamily: DefaultTextStyle.of(context).style.fontFamily,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            remainingMins > 60
-                                ? '${(remainingMins / 60).toStringAsFixed(1)} soat qoldi'
-                                : '$remainingMins daq qoldi',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFFFF9500),
-                              fontWeight: FontWeight.w700,
+                          if (remainingMins > 0) ...[
+                            TextSpan(
+                              text: ' • ',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: subtextColor,
+                                fontFamily: DefaultTextStyle.of(context).style.fontFamily,
+                              ),
                             ),
-                          ),
+                            TextSpan(
+                              text: remainingMins > 60
+                                  ? '${(remainingMins / 60).toStringAsFixed(1)} soat qoldi'
+                                  : '$remainingMins daq qoldi',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: const Color(0xFFFF9500),
+                                fontWeight: FontWeight.w700,
+                                fontFamily: DefaultTextStyle.of(context).style.fontFamily,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ],
                 ),
               ),
 
+              const SizedBox(width: 8),
+
               // Level 5 Instant Trust or Verified Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                 decoration: BoxDecoration(
                   color: isLevel5
                       ? const Color(0xFF34C759).withOpacity(0.18)
                       : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF2F2F7)),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isLevel5
                         ? const Color(0xFF34C759)
@@ -131,14 +140,14 @@ class ReportItemCard extends StatelessWidget {
                   children: [
                     Icon(
                       isLevel5 ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.clock_fill,
-                      size: 13,
+                      size: 11.5,
                       color: isLevel5 ? const Color(0xFF34C759) : subtextColor,
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 3.5),
                     Text(
                       isLevel5 ? 'LEVEL 5 VERIFIED' : '${report.upvotes} VOTES',
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 9.5,
                         fontWeight: FontWeight.w800,
                         color: isLevel5 ? const Color(0xFF34C759) : subtextColor,
                       ),

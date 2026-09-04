@@ -6,31 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:navigator/core/constants/app_colors.dart';
 import 'package:navigator/core/localization/app_localizations.dart';
 import 'package:navigator/features/profile/presentation/providers/profile_provider.dart';
-import 'package:navigator/features/profile/presentation/widgets/badges_grid.dart';
 import 'package:navigator/features/profile/presentation/widgets/driving_telematics_card.dart';
 import 'package:navigator/features/profile/presentation/widgets/leaderboard_tab.dart';
-import 'package:navigator/features/profile/presentation/widgets/safety_score_gauge.dart';
 import 'package:navigator/features/reports/presentation/providers/report_provider.dart';
 import 'package:navigator/features/settings/presentation/providers/settings_provider.dart';
 import 'package:navigator/features/settings/presentation/screens/settings_screen.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  int _selectedTab = 0; // 0 = Badges, 1 = Leaderboard
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tr = AppLocalizations.of(context);
     final settings = ref.watch(settingsNotifierProvider);
     final isDark = settings.isDarkMode;
     final profileAsync = ref.watch(userProfileProvider);
-    final badgesAsync = ref.watch(badgesProvider);
     final leaderboardAsync = ref.watch(leaderboardProvider);
 
     final textColor = isDark ? Colors.white : const Color(0xFF1C1C1E);
@@ -143,9 +133,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     color: const Color(0xFF34C759).withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: const Text(
-                                    'Level 5 • Road Marshal',
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF34C759)),
+                                  child: Text(
+                                    profile.driverLevelTitle,
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF34C759)),
                                   ),
                                 ),
                               ],
@@ -175,14 +165,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // 2. Safety Score Gauge
-                SafetyScoreGauge(
-                  score: profile.safetyScore,
-                  tierTitle: profile.tierTitle,
-                ),
-                const SizedBox(height: 16),
-
-                // 2.5 Driving Telematics & Weekly AI Behavior Report
+                // 2. Driving Telematics & Weekly AI Behavior Report
                 const DrivingTelematicsCard(),
                 const SizedBox(height: 16),
 
@@ -236,60 +219,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // 4. Badges vs Leaderboard Segmented Tabs
-                SizedBox(
-                  width: double.infinity,
-                  child: CupertinoSlidingSegmentedControl<int>(
-                    groupValue: _selectedTab,
-                    backgroundColor: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE5E5EA),
-                    thumbColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                    children: {
-                      0: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Text(
-                          tr.tr('achievements'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: _selectedTab == 0 ? FontWeight.w700 : FontWeight.w500,
-                            color: _selectedTab == 0 ? brandColor : subtextColor,
-                          ),
-                        ),
+                // 4. Leaderboard Section
+                Row(
+                  children: [
+                    Icon(CupertinoIcons.rosette, color: brandColor, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      tr.tr('leaderboard'),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: textColor,
+                        letterSpacing: -0.3,
                       ),
-                      1: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Text(
-                          tr.tr('leaderboard'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: _selectedTab == 1 ? FontWeight.w700 : FontWeight.w500,
-                            color: _selectedTab == 1 ? brandColor : subtextColor,
-                          ),
-                        ),
-                      ),
-                    },
-                    onValueChanged: (val) {
-                      if (val != null) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedTab = val);
-                      }
-                    },
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // 5. Tab Content
-                if (_selectedTab == 0)
-                  badgesAsync.when(
-                    data: (badges) => BadgesGrid(badges: badges),
-                    loading: () => const Center(child: CupertinoActivityIndicator()),
-                    error: (err, _) => Text('Error loading badges: $err', style: TextStyle(color: subtextColor)),
-                  )
-                else
-                  leaderboardAsync.when(
-                    data: (entries) => LeaderboardTab(entries: entries),
-                    loading: () => const Center(child: CupertinoActivityIndicator()),
-                    error: (err, _) => Text('Error loading leaderboard: $err', style: TextStyle(color: subtextColor)),
-                  ),
+                // 5. Leaderboard List
+                leaderboardAsync.when(
+                  data: (entries) => LeaderboardTab(entries: entries),
+                  loading: () => const Center(child: CupertinoActivityIndicator()),
+                  error: (err, _) => Text('Error loading leaderboard: $err', style: TextStyle(color: subtextColor)),
+                ),
               ],
             ),
           );

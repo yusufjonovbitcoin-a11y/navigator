@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:navigator/core/constants/app_colors.dart';
 import 'package:navigator/core/localization/app_localizations.dart';
+import 'package:navigator/core/services/yandex_geocoding_service.dart';
 import 'package:navigator/core/services/osm_geocoding_service.dart';
 import 'package:navigator/features/map_radar/domain/models/map_style.dart';
 import 'package:navigator/features/map_radar/presentation/providers/map_style_provider.dart';
@@ -25,7 +27,7 @@ class RoutePlanningScreen extends ConsumerStatefulWidget {
 class _RoutePlanningScreenState extends ConsumerState<RoutePlanningScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
-  final OsmGeocodingService _geocodingService = OsmGeocodingService();
+  final YandexGeocodingService _geocodingService = YandexGeocodingService();
 
   List<OsmPlace> _searchResults = [];
   bool _isSearching = false;
@@ -61,7 +63,12 @@ class _RoutePlanningScreenState extends ConsumerState<RoutePlanningScreen> {
 
     _debounceTimer = Timer(const Duration(milliseconds: 350), () async {
       setState(() => _isSearching = true);
-      final results = await _geocodingService.searchPlaces(query);
+      final loc = ref.read(userLocationStreamProvider).value;
+      final results = await _geocodingService.searchPlaces(
+        query,
+        userLat: loc?.latLng.latitude,
+        userLng: loc?.latLng.longitude,
+      );
       if (mounted) {
         setState(() {
           _searchResults = results;
@@ -71,18 +78,45 @@ class _RoutePlanningScreenState extends ConsumerState<RoutePlanningScreen> {
     });
   }
 
-  void _selectOsmPlace(OsmPlace place) {
+  void _selectOsmPlace(OsmPlace place) async {
     HapticFeedback.selectionClick();
     _searchController.clear();
     setState(() => _searchResults = []);
     FocusScope.of(context).unfocus();
 
-    ref.read(routePlanningProvider.notifier).planRoute(
-          customDest: place.latLng,
-          customDestName: place.name,
-        );
+    LatLng? target;
+    String targetName = place.name;
 
-    _mapController.move(place.latLng, 14.0);
+    if (place.lat != 0.0 && place.lng != 0.0) {
+      target = place.latLng;
+    } else if (place.uri != null) {
+      final resolved = await _geocodingService.resolveUri(place.uri!);
+      if (resolved != null) {
+        target = resolved.latLng;
+        if (resolved.name.isNotEmpty) targetName = resolved.name;
+      }
+    }
+
+    if (target == null) {
+      final fallbackQuery = place.displayName.isNotEmpty ? place.displayName : place.name;
+      final fallbackList = await _geocodingService.searchPlaces(fallbackQuery);
+      for (final p in fallbackList) {
+        if (p.lat != 0.0 && p.lng != 0.0) {
+          target = p.latLng;
+          targetName = p.name;
+          break;
+        }
+      }
+    }
+
+    if (target != null && mounted) {
+      ref.read(routePlanningProvider.notifier).planRoute(
+            customDest: target,
+            customDestName: targetName,
+          );
+
+      _mapController.move(target, 14.0);
+    }
   }
 
   @override
@@ -204,7 +238,7 @@ class _RoutePlanningScreenState extends ConsumerState<RoutePlanningScreen> {
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
                               ),
                               subtitle: Text(
-                                place.displayName,
+                                place.subtitle ?? place.displayName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(fontSize: 12, color: subtextColor),
@@ -284,10 +318,15 @@ class _RoutePlanningScreenState extends ConsumerState<RoutePlanningScreen> {
                   children: [
                     TileLayer(
                       urlTemplate: mapStyle.urlTemplate,
+                      fallbackUrl: mapStyle.fallbackUrl,
                       subdomains: mapStyle.subdomains,
                       userAgentPackageName: 'com.smartradar.navigator',
-                      maxNativeZoom: 19,
+                      maxNativeZoom: mapStyle.maxNativeZoom,
                       maxZoom: 20,
+                      panBuffer: 1,
+                      keepBuffer: 3,
+                      evictErrorTileStrategy: EvictErrorTileStrategy.dispose,
+                      tileDisplay: const TileDisplay.fadeIn(duration: Duration(milliseconds: 150)),
                     ),
 
                     // Polylines Layer

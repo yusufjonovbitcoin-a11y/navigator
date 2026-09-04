@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:navigator/core/constants/app_colors.dart';
 import 'package:navigator/core/localization/app_localizations.dart';
 import 'package:navigator/features/settings/presentation/providers/settings_provider.dart';
-import 'package:navigator/features/settings/presentation/widgets/api_config_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -107,27 +106,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.primary.withOpacity(0.18) : const Color(0xFF007AFF).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.primary.withOpacity(0.18) : const Color(0xFF007AFF).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                CupertinoIcons.speaker_2_fill,
+                                color: isDark ? AppColors.primary : const Color(0xFF007AFF),
+                                size: 18,
+                              ),
                             ),
-                            child: Icon(
-                              CupertinoIcons.speaker_2_fill,
-                              color: isDark ? AppColors.primary : const Color(0xFF007AFF),
-                              size: 18,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                tr.tr('voice_alerts'),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            tr.tr('voice_alerts'),
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       CupertinoSwitch(
                         value: settings.voiceAlertsEnabled,
                         activeTrackColor: isDark ? AppColors.primary : const Color(0xFF007AFF),
@@ -145,27 +149,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.primary.withOpacity(0.18) : const Color(0xFF007AFF).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.primary.withOpacity(0.18) : const Color(0xFF007AFF).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                CupertinoIcons.bell_fill,
+                                color: isDark ? AppColors.primary : const Color(0xFF007AFF),
+                                size: 18,
+                              ),
                             ),
-                            child: Icon(
-                              CupertinoIcons.bell_fill,
-                              color: isDark ? AppColors.primary : const Color(0xFF007AFF),
-                              size: 18,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                tr.tr('sound_chimes'),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            tr.tr('sound_chimes'),
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       CupertinoSwitch(
                         value: settings.soundChimesEnabled,
                         activeTrackColor: isDark ? AppColors.primary : const Color(0xFF007AFF),
@@ -183,39 +192,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.radarRed.withOpacity(0.18),
-                              borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.radarRed.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(CupertinoIcons.gauge, color: AppColors.radarRed, size: 18),
                             ),
-                            child: const Icon(CupertinoIcons.gauge, color: AppColors.radarRed, size: 18),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            tr.tr('alert_distance'),
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
-                          ),
-                        ],
-                      ),
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: settings.alertDistanceMeters,
-                          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                          icon: Icon(CupertinoIcons.chevron_down, color: subtextColor, size: 14),
-                          items: [
-                            DropdownMenuItem(value: 300, child: Text('300 m', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 500, child: Text('500 m', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 1000, child: Text('1000 m', style: TextStyle(color: textColor))),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                tr.tr('alert_distance'),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
+                              ),
+                            ),
                           ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              HapticFeedback.selectionClick();
-                              notifier.setAlertDistance(val);
-                            }
-                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE5E5EA).withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: settings.alertDistanceMeters,
+                            isDense: true,
+                            dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            icon: Icon(CupertinoIcons.chevron_down, color: subtextColor, size: 13),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : textColor,
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 300, child: Text('300 m')),
+                              DropdownMenuItem(value: 500, child: Text('500 m')),
+                              DropdownMenuItem(value: 1000, child: Text('1000 m')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                HapticFeedback.selectionClick();
+                                notifier.setAlertDistance(val);
+                              }
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -353,11 +380,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
-                                tr.tr('units'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  tr.tr('units'),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
+                                ),
                               ),
                             ),
                           ],
@@ -402,40 +431,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // 4. Developer / Backend Configuration
-          _buildSectionHeader('DEVELOPER & REST API', isDark),
-          _buildCard(
-            isDark: isDark,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              leading: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFFA855F7).withOpacity(0.2) : const Color(0xFFA855F7).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(CupertinoIcons.wrench_fill, color: Color(0xFFA855F7), size: 18),
-              ),
-              title: Text(
-                tr.tr('api_configuration'),
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor),
-              ),
-              subtitle: Text(
-                settings.useMockData ? 'Mode: Mock Repository' : 'Mode: REST (API Active)',
-                style: TextStyle(fontSize: 12, color: subtextColor),
-              ),
-              trailing: Icon(CupertinoIcons.chevron_forward, color: subtextColor, size: 18),
-              onTap: () {
-                HapticFeedback.selectionClick();
-                showDialog(
-                  context: context,
-                  builder: (_) => const ApiConfigDialog(),
-                );
-              },
             ),
           ),
           const SizedBox(height: 32),

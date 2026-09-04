@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:navigator/core/constants/app_colors.dart';
 import 'package:navigator/core/localization/app_localizations.dart';
+import 'package:navigator/features/ai_agent/presentation/screens/ai_agent_screen.dart';
 import 'package:navigator/features/categories/presentation/screens/categories_hub_screen.dart';
 import 'package:navigator/features/map_radar/presentation/screens/home_map_screen.dart';
 import 'package:navigator/features/profile/presentation/screens/profile_screen.dart';
@@ -25,6 +26,7 @@ class MainScreenWrapper extends ConsumerWidget {
 
     final screens = const [
       HomeMapScreen(),
+      AiAgentScreen(),
       CategoriesHubScreen(),
       ReportsScreen(),
       ProfileScreen(),
@@ -32,8 +34,9 @@ class MainScreenWrapper extends ConsumerWidget {
 
     final tabItems = [
       (CupertinoIcons.compass, CupertinoIcons.compass_fill, tr.tr('tab_home')),
+      (CupertinoIcons.sparkles, CupertinoIcons.sparkles, tr.tr('tab_ai')),
       (CupertinoIcons.plus_circle, CupertinoIcons.plus_circle_fill, tr.tr('tab_add')),
-      (CupertinoIcons.bubble_left_bubble_right, CupertinoIcons.bubble_left_bubble_right_fill, tr.tr('tab_reports')),
+      (CupertinoIcons.chart_bar_square, CupertinoIcons.chart_bar_square_fill, tr.tr('tab_reports')),
       (CupertinoIcons.person_crop_circle, CupertinoIcons.person_crop_circle_fill, tr.tr('tab_profile')),
     ];
 
@@ -77,10 +80,10 @@ class MainScreenWrapper extends ConsumerWidget {
                     children: [
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: isSelected ? activeColor.withOpacity(0.15) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
                           isSelected ? item.$2 : item.$1,
