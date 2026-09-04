@@ -53,7 +53,7 @@ class RadarApp extends ConsumerWidget {
     final locale = ref.watch(currentLocaleProvider);
 
     return MaterialApp(
-      title: 'Radar AI Navigator',
+      title: 'Archa',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

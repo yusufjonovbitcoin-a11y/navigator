@@ -32,7 +32,7 @@ class AppLocalizations {
   static const _localizedValues = <String, Map<String, String>>{
     'en': {
       // General
-      'app_name': 'Radar AI Navigator',
+      'app_name': 'Archa',
       'cancel': 'Cancel',
       'confirm': 'Confirm',
       'save': 'Save',
@@ -169,7 +169,7 @@ class AppLocalizations {
     },
     'ru': {
       // General
-      'app_name': 'Радар ИИ Навигатор',
+      'app_name': 'Archa',
       'cancel': 'Отмена',
       'confirm': 'Подтвердить',
       'save': 'Сохранить',
@@ -306,7 +306,7 @@ class AppLocalizations {
     },
     'uz': {
       // General
-      'app_name': 'Radar AI Navigator',
+      'app_name': 'Archa',
       'cancel': 'Bekor qilish',
       'confirm': 'Tasdiqlash',
       'save': 'Saqlash',
