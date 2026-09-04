@@ -965,62 +965,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               child: ParkingDrawingHud(),
             ),
 
-          // 4.5. Glowing Voice Copilot "Hey Radar" Floating Button
-          Positioned(
-            right: 16,
-            bottom: 375,
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.heavyImpact();
-                VoiceAssistantOverlay.show(context);
-              },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF00E5FF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withOpacity(0.45),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.35),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(CupertinoIcons.mic_fill, color: Colors.white, size: 17),
-                        SizedBox(width: 6),
-                        Text(
-                          '«Hey Radar»',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12.5,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
           // 5. iOS Vertical Frosted Action Capsule (Right Side)
           Positioned(
             right: 16,

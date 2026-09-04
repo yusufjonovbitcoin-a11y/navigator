@@ -76,14 +76,15 @@ class VoiceCopilotNotifier extends StateNotifier<VoiceCopilotState> {
 
   Future<void> _initSpeech() async {
     try {
-      print('[SPEECH DEBUG] Initializing speech...');
       _speechInitialized = await _speech.initialize(
-        onError: (err) => print('[SPEECH DEBUG] Error: $err'),
-        onStatus: (status) => print('[SPEECH DEBUG] Status: $status'),
+        onError: (err) => state = state.copyWith(isListening: false),
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            state = state.copyWith(isListening: false);
+          }
+        },
       );
-      print('[SPEECH DEBUG] _speechInitialized: $_speechInitialized, hasPermission: ${_speech.hasPermission}, isAvailable: ${_speech.isAvailable}');
-    } catch (e) {
-      print('[SPEECH DEBUG] Exception during speech init: $e');
+    } catch (_) {
       _speechInitialized = false;
     }
   }
