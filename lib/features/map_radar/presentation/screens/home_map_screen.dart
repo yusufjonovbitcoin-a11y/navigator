@@ -986,21 +986,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // 🅿️ Parking Drawing Mode Toggle Button
-                      IconButton(
-                        icon: Icon(
-                          CupertinoIcons.placemark_fill,
-                          color: parkingState.isDrawingMode ? const Color(0xFF34C759) : AppColors.primary,
-                          size: 22,
-                        ),
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          ref.read(parkingZoneProvider.notifier).toggleDrawingMode();
-                        },
-                        tooltip: 'Parkovka Chizish',
-                      ),
-                      Divider(color: Colors.white.withOpacity(0.1), height: 12),
-
                       // Map Layer Toggle Button
                       IconButton(
                         icon: const Icon(CupertinoIcons.layers_alt_fill, color: AppColors.primary, size: 22),
