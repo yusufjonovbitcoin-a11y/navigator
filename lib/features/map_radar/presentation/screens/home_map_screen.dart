@@ -178,107 +178,244 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
 
   void _showMapStyleDialog() {
     HapticFeedback.selectionClick();
-    final currentStyle = ref.read(mapStyleProvider);
+    final isDark = ref.read(settingsNotifierProvider).isDarkMode;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        final tr = AppLocalizations.of(context);
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      isScrollControlled: true,
+      builder: (ctx) {
+        final tr = AppLocalizations.of(ctx);
+        final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
+        final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+        final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final activeStyle = ref.watch(mapStyleProvider);
+
+            return Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withOpacity(0.88),
+                color: bg,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                border: Border(top: BorderSide(color: Colors.white.withOpacity(0.15))),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+                    blurRadius: 30,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
               ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 34),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Top Drag Handle
                   Center(
                     child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
+                      width: 38,
+                      height: 4.5,
+                      margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(2),
+                        color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     ),
                   ),
-                  Text(
-                    tr.tr('map_styles'),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+
+                  // Header with Close Button
                   Row(
-                    children: MapStyle.values.map((style) {
-                      final isSelected = style == currentStyle;
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            ref.read(mapStyleProvider.notifier).state = style;
-                            Navigator.pop(context);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primary.withOpacity(0.2) : Colors.white.withOpacity(0.06),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isSelected ? AppColors.primary : Colors.white.withOpacity(0.12),
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  style == MapStyle.darkNavigation
-                                      ? CupertinoIcons.moon_fill
-                                      : style == MapStyle.osmStandard
-                                          ? CupertinoIcons.sun_max_fill
-                                          : CupertinoIcons.car_detailed,
-                                  color: isSelected ? AppColors.primary : Colors.white70,
-                                  size: 24,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  style.getLocalizedName(tr),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                                    color: isSelected ? AppColors.primary : Colors.white70,
-                                  ),
-                                ),
-                              ],
-                            ),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        tr.tr('map_styles'),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            CupertinoIcons.xmark,
+                            size: 16,
+                            color: subtextColor,
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Category Label: XARITA TURI
+                  Text(
+                    'XARITA TURI',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: subtextColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 3 Google Maps Style Cards
+                  Row(
+                    children: [
+                      // 1. Standart
+                      _buildGoogleMapStyleCard(
+                        style: MapStyle.osmStandard,
+                        title: tr.tr('osm_standard'),
+                        icon: CupertinoIcons.map_fill,
+                        gradientColors: isDark
+                            ? const [Color(0xFF1E293B), Color(0xFF334155)]
+                            : const [Color(0xFFE2F1E8), Color(0xFFD4EAE0)],
+                        iconColor: const Color(0xFF22C55E),
+                        isSelected: activeStyle == MapStyle.osmStandard,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(mapStyleProvider.notifier).state = MapStyle.osmStandard;
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 10),
+
+                      // 2. Yo'ldosh (Satellite)
+                      _buildGoogleMapStyleCard(
+                        style: MapStyle.satellite,
+                        title: tr.tr('satellite'),
+                        icon: CupertinoIcons.globe,
+                        gradientColors: const [Color(0xFF1E3A5F), Color(0xFF0F172A)],
+                        iconColor: const Color(0xFF38BDF8),
+                        isSelected: activeStyle == MapStyle.satellite,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(mapStyleProvider.notifier).state = MapStyle.satellite;
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 10),
+
+                      // 3. Tungi (Dark Navigation)
+                      _buildGoogleMapStyleCard(
+                        style: MapStyle.darkNavigation,
+                        title: tr.tr('osm_dark'),
+                        icon: CupertinoIcons.moon_stars_fill,
+                        gradientColors: const [Color(0xFF0F172A), Color(0xFF1E1B4B)],
+                        iconColor: const Color(0xFF818CF8),
+                        isSelected: activeStyle == MapStyle.darkNavigation,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(mapStyleProvider.notifier).state = MapStyle.darkNavigation;
+                          setModalState(() {});
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildGoogleMapStyleCard({
+    required MapStyle style,
+    required String title,
+    required IconData icon,
+    required List<Color> gradientColors,
+    required Color iconColor,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    const activeBorderColor = Color(0xFF007AFF);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 72,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSelected ? activeBorderColor : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                  width: isSelected ? 2.5 : 1,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: activeBorderColor.withOpacity(0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Icon(icon, color: iconColor, size: 30),
+                  ),
+                  if (isSelected)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF007AFF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.checkmark,
+                          color: Colors.white,
+                          size: 11,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected
+                    ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF007AFF))
+                    : (isDark ? Colors.white70 : const Color(0xFF334155)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -947,6 +1084,40 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               ),
             ),
 
+          // 2.5. Google Maps Style Standalone Floating Layers Button (Top Right)
+          if (!parkingState.isDrawingMode && !placementState.isPlacing)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 106,
+              right: 16,
+              child: GestureDetector(
+                onTap: _showMapStyleDialog,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.white.withOpacity(0.15) : const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.45 : 0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    CupertinoIcons.square_stack_3d_up_fill,
+                    color: isDark ? AppColors.primary : const Color(0xFF007AFF),
+                    size: 21,
+                  ),
+                ),
+              ),
+            ),
+
           // 3. Map Placement HUD Banner (Active when placing Radar, GAI, or Camera)
           if (placementState.isPlacing)
             const Positioned(
@@ -986,14 +1157,6 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Map Layer Toggle Button
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.layers_alt_fill, color: AppColors.primary, size: 22),
-                        onPressed: _showMapStyleDialog,
-                        tooltip: 'Layers',
-                      ),
-                      Divider(color: Colors.white.withOpacity(0.1), height: 12),
-
                       // Simulation Drive Toggle
                       IconButton(
                         icon: Icon(
