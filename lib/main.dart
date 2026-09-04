@@ -6,7 +6,7 @@ import 'core/localization/app_localizations.dart';
 import 'core/services/storage_service.dart';
 import 'core/services/supabase_service.dart';
 import 'core/theme/app_theme.dart';
-import 'features/onboarding/presentation/screens/splash_screen.dart';
+import 'main_screen_wrapper.dart';
 import 'features/settings/presentation/providers/settings_provider.dart';
 
 void main() async {
@@ -76,7 +76,7 @@ class RadarApp extends ConsumerWidget {
         }
         return const Locale('uz');
       },
-      home: const SplashScreen(),
+      home: const MainScreenWrapper(),
     );
   }
 }
