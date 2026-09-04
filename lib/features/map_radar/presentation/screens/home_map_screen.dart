@@ -193,6 +193,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
         return StatefulBuilder(
           builder: (context, setModalState) {
             final activeStyle = ref.watch(mapStyleProvider);
+            final activeFilter = ref.watch(mapFilterProvider);
 
             return Container(
               decoration: BoxDecoration(
@@ -200,13 +201,13 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.5 : 0.15),
+                    color: Colors.black.withOpacity(isDark ? 0.55 : 0.14),
                     blurRadius: 30,
                     offset: const Offset(0, -4),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 34),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +215,7 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   // Top Drag Handle
                   Center(
                     child: Container(
-                      width: 38,
+                      width: 40,
                       height: 4.5,
                       margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
@@ -224,12 +225,12 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                     ),
                   ),
 
-                  // Header with Close Button
+                  // Header with Title & Close Button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        tr.tr('map_styles'),
+                        tr.tr('map_type'),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -256,9 +257,62 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   ),
                   const SizedBox(height: 18),
 
-                  // Category Label: XARITA TURI
+                  // 3 Google Maps Style Cards (Default, Satellite, Dark)
+                  Row(
+                    children: [
+                      // 1. Standart / По умолчанию
+                      _buildGoogleMapStyleCard(
+                        style: MapStyle.osmStandard,
+                        title: tr.tr('osm_standard'),
+                        isSelected: activeStyle == MapStyle.osmStandard,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(mapStyleProvider.notifier).state = MapStyle.osmStandard;
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 12),
+
+                      // 2. Yo'ldosh / Спутник
+                      _buildGoogleMapStyleCard(
+                        style: MapStyle.satellite,
+                        title: tr.tr('satellite'),
+                        isSelected: activeStyle == MapStyle.satellite,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(mapStyleProvider.notifier).state = MapStyle.satellite;
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 12),
+
+                      // 3. Tungi / Тёмная
+                      _buildGoogleMapStyleCard(
+                        style: MapStyle.darkNavigation,
+                        title: tr.tr('osm_dark'),
+                        isSelected: activeStyle == MapStyle.darkNavigation,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(mapStyleProvider.notifier).state = MapStyle.darkNavigation;
+                          setModalState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 22),
+                  Divider(
+                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                    height: 1,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Section 2: Подробности / Qo'shimcha ma'lumotlar
                   Text(
-                    'XARITA TURI',
+                    tr.tr('map_details').toUpperCase(),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -268,57 +322,47 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
                   ),
                   const SizedBox(height: 12),
 
-                  // 3 Google Maps Style Cards
+                  // 3 Feature Toggles: Tirbandlik, Radarlar, Parkovkalar
                   Row(
                     children: [
-                      // 1. Standart
-                      _buildGoogleMapStyleCard(
-                        style: MapStyle.osmStandard,
-                        title: tr.tr('osm_standard'),
-                        icon: CupertinoIcons.map_fill,
-                        gradientColors: isDark
-                            ? const [Color(0xFF1E293B), Color(0xFF334155)]
-                            : const [Color(0xFFE2F1E8), Color(0xFFD4EAE0)],
-                        iconColor: const Color(0xFF22C55E),
-                        isSelected: activeStyle == MapStyle.osmStandard,
+                      // Tirbandlik (Traffic)
+                      _buildDetailPill(
+                        icon: CupertinoIcons.car_detailed,
+                        label: tr.tr('traffic'),
+                        color: const Color(0xFFEA4335),
+                        isActive: true,
                         isDark: isDark,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          ref.read(mapStyleProvider.notifier).state = MapStyle.osmStandard;
+                        },
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Radarlar & Kameralar
+                      _buildDetailPill(
+                        icon: CupertinoIcons.dot_radiowaves_left_right,
+                        label: tr.tr('radar'),
+                        color: const Color(0xFFFF9500),
+                        isActive: activeFilter == MapFilterType.all || activeFilter == MapFilterType.radar,
+                        isDark: isDark,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          ref.read(mapFilterProvider.notifier).toggleFilter(MapFilterType.radar);
                           setModalState(() {});
                         },
                       ),
                       const SizedBox(width: 10),
 
-                      // 2. Yo'ldosh (Satellite)
-                      _buildGoogleMapStyleCard(
-                        style: MapStyle.satellite,
-                        title: tr.tr('satellite'),
-                        icon: CupertinoIcons.globe,
-                        gradientColors: const [Color(0xFF1E3A5F), Color(0xFF0F172A)],
-                        iconColor: const Color(0xFF38BDF8),
-                        isSelected: activeStyle == MapStyle.satellite,
+                      // Parkovkalar
+                      _buildDetailPill(
+                        icon: CupertinoIcons.placemark_fill,
+                        label: 'Parkovka',
+                        color: const Color(0xFF34C759),
+                        isActive: activeFilter == MapFilterType.all || activeFilter == MapFilterType.parkovka,
                         isDark: isDark,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          ref.read(mapStyleProvider.notifier).state = MapStyle.satellite;
-                          setModalState(() {});
-                        },
-                      ),
-                      const SizedBox(width: 10),
-
-                      // 3. Tungi (Dark Navigation)
-                      _buildGoogleMapStyleCard(
-                        style: MapStyle.darkNavigation,
-                        title: tr.tr('osm_dark'),
-                        icon: CupertinoIcons.moon_stars_fill,
-                        gradientColors: const [Color(0xFF0F172A), Color(0xFF1E1B4B)],
-                        iconColor: const Color(0xFF818CF8),
-                        isSelected: activeStyle == MapStyle.darkNavigation,
-                        isDark: isDark,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          ref.read(mapStyleProvider.notifier).state = MapStyle.darkNavigation;
+                          ref.read(mapFilterProvider.notifier).toggleFilter(MapFilterType.parkovka);
                           setModalState(() {});
                         },
                       ),
@@ -333,17 +377,187 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
     );
   }
 
+  Widget _buildMapTypePreview(MapStyle style) {
+    switch (style) {
+      case MapStyle.osmStandard:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(13),
+          child: Container(
+            color: const Color(0xFFE8F4EC),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: -6,
+                  top: -6,
+                  width: 44,
+                  height: 44,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFC8E6C9).withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 32,
+                  height: 8,
+                  child: Container(color: Colors.white),
+                ),
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: 36,
+                  width: 8,
+                  child: Container(color: Colors.white),
+                ),
+                Positioned(
+                  left: 8,
+                  right: 18,
+                  top: 34,
+                  height: 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A73E8),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Center(
+                  child: Icon(
+                    CupertinoIcons.location_north_fill,
+                    size: 16,
+                    color: Color(0xFFEA4335),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case MapStyle.satellite:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(13),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1E392A), Color(0xFF0F2417)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -10,
+                  bottom: -10,
+                  width: 55,
+                  height: 55,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF13364B).withOpacity(0.95),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 6,
+                  top: 12,
+                  width: 50,
+                  height: 2,
+                  child: Transform.rotate(
+                    angle: 0.45,
+                    child: Container(color: Colors.white30),
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.35),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.globe,
+                      size: 20,
+                      color: Color(0xFF7DD3FC),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case MapStyle.darkNavigation:
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(13),
+          child: Container(
+            color: const Color(0xFF0F172A),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 32,
+                  height: 7,
+                  child: Container(color: const Color(0xFF1E293B)),
+                ),
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  left: 36,
+                  width: 7,
+                  child: Container(color: const Color(0xFF1E293B)),
+                ),
+                Positioned(
+                  left: 10,
+                  right: 18,
+                  top: 33.5,
+                  height: 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5FF),
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00E5FF).withOpacity(0.6),
+                          blurRadius: 5,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1).withOpacity(0.35),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.moon_stars_fill,
+                      size: 16,
+                      color: Color(0xFF818CF8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    }
+  }
+
   Widget _buildGoogleMapStyleCard({
     required MapStyle style,
     required String title,
-    required IconData icon,
-    required List<Color> gradientColors,
-    required Color iconColor,
     required bool isSelected,
     required bool isDark,
     required VoidCallback onTap,
   }) {
-    const activeBorderColor = Color(0xFF007AFF);
+    const activeBorderColor = Color(0xFF1A73E8);
 
     return Expanded(
       child: GestureDetector(
@@ -352,22 +566,17 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              height: 72,
+              height: 74,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: gradientColors,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isSelected ? activeBorderColor : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                  color: isSelected ? activeBorderColor : (isDark ? Colors.white12 : const Color(0xFFDADCE0)),
                   width: isSelected ? 2.5 : 1,
                 ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: activeBorderColor.withOpacity(0.35),
+                          color: activeBorderColor.withOpacity(0.32),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -376,17 +585,17 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               ),
               child: Stack(
                 children: [
-                  Center(
-                    child: Icon(icon, color: iconColor, size: 30),
+                  Positioned.fill(
+                    child: _buildMapTypePreview(style),
                   ),
                   if (isSelected)
                     Positioned(
                       right: 6,
                       top: 6,
                       child: Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: const EdgeInsets.all(2.5),
                         decoration: const BoxDecoration(
-                          color: Color(0xFF007AFF),
+                          color: activeBorderColor,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -406,14 +615,60 @@ class _HomeMapScreenState extends ConsumerState<HomeMapScreen>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 12.5,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 color: isSelected
-                    ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF007AFF))
-                    : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                    ? activeBorderColor
+                    : (isDark ? Colors.white : const Color(0xFF3C4043)),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailPill({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isActive,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isActive
+                ? color.withOpacity(isDark ? 0.22 : 0.12)
+                : (isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9)),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isActive ? color.withOpacity(0.5) : (isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
