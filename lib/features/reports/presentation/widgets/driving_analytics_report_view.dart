@@ -351,7 +351,7 @@ class _DrivingAnalyticsReportViewState extends ConsumerState<DrivingAnalyticsRep
 
               // Bar Chart Row
               SizedBox(
-                height: 120,
+                height: 132,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
